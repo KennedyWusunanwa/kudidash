@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { startTransition } from "react";
-import { Send } from "lucide-react";
+import { Download, Send } from "lucide-react";
 import { toast } from "sonner";
 import { postInvoiceAction } from "@/lib/actions/invoices.actions";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -58,27 +58,34 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
                 </TableCell>
                 <TableCell>{formatCurrency(invoice.total)}</TableCell>
                 <TableCell className="text-right">
-                  {invoice.status === "draft" || invoice.status === "approved" ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() =>
-                        startTransition(async () => {
-                          const result = await postInvoiceAction({ orgId, invoiceId: invoice.id });
-                          if (!result.success) {
-                            toast.error(result.error || "Failed to post invoice.");
-                            return;
-                          }
-                          toast.success("Invoice posted.");
-                        })
-                      }
-                    >
-                      <Send className="size-4" />
-                      Post
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button asChild type="button" size="sm" variant="outline">
+                      <a href={`/${orgId}/invoices/${invoice.id}/pdf`}>
+                        <Download className="size-4" />
+                        PDF
+                      </a>
                     </Button>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">-</span>
-                  )}
+
+                    {invoice.status === "draft" || invoice.status === "approved" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() =>
+                          startTransition(async () => {
+                            const result = await postInvoiceAction({ orgId, invoiceId: invoice.id });
+                            if (!result.success) {
+                              toast.error(result.error || "Failed to post invoice.");
+                              return;
+                            }
+                            toast.success("Invoice posted.");
+                          })
+                        }
+                      >
+                        <Send className="size-4" />
+                        Post
+                      </Button>
+                    ) : null}
+                  </div>
                 </TableCell>
               </TableRow>
             ))
