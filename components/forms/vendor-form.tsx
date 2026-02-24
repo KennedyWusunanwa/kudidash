@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -25,6 +26,7 @@ const schema = z.object({
 type InputType = z.infer<typeof schema>;
 
 export function VendorForm({ orgId }: { orgId: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const form = useForm<InputType>({
     resolver: zodResolver(schema),
@@ -40,6 +42,7 @@ export function VendorForm({ orgId }: { orgId: string }) {
       }
       toast.success("Vendor created.");
       form.reset();
+      router.refresh();
     });
   };
 

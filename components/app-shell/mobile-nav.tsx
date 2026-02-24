@@ -20,6 +20,7 @@ function navItems(orgId: string) {
     { href: `/${orgId}/journals`, label: "Journals" },
     { href: `/${orgId}/invoices`, label: "Invoices" },
     { href: `/${orgId}/bills`, label: "Bills" },
+    { href: `/${orgId}/inventory`, label: "Inventory" },
     { href: `/${orgId}/banking/reconciliation`, label: "Banking" },
     { href: `/${orgId}/reports`, label: "Reports" },
     { href: `/${orgId}/settings`, label: "Settings" },

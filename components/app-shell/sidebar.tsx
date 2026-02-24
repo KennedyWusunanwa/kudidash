@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Boxes,
   Building2,
   CreditCard,
   FileText,
@@ -23,6 +24,7 @@ function buildNav(orgId: string) {
     { href: `/${orgId}/journals`, label: "Journals", icon: FileText },
     { href: `/${orgId}/invoices`, label: "Invoices", icon: Receipt },
     { href: `/${orgId}/bills`, label: "Bills", icon: FileText },
+    { href: `/${orgId}/inventory`, label: "Inventory", icon: Boxes },
     { href: `/${orgId}/banking/reconciliation`, label: "Banking", icon: Landmark },
     { href: `/${orgId}/reports`, label: "Reports", icon: CreditCard },
     { href: `/${orgId}/settings`, label: "Settings", icon: Settings },

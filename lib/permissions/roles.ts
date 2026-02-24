@@ -10,6 +10,7 @@ export type Permission =
   | "journals.reverse"
   | "sales.manage"
   | "purchases.manage"
+  | "inventory.manage"
   | "banking.manage"
   | "reports.view";
 
@@ -24,6 +25,7 @@ const PERMISSIONS_BY_ROLE: Record<Role, Set<Permission>> = {
     "journals.reverse",
     "sales.manage",
     "purchases.manage",
+    "inventory.manage",
     "banking.manage",
     "reports.view",
   ]),
@@ -36,6 +38,7 @@ const PERMISSIONS_BY_ROLE: Record<Role, Set<Permission>> = {
     "journals.post",
     "sales.manage",
     "purchases.manage",
+    "inventory.manage",
     "banking.manage",
     "reports.view",
   ]),
@@ -44,6 +47,7 @@ const PERMISSIONS_BY_ROLE: Record<Role, Set<Permission>> = {
     "journals.create",
     "sales.manage",
     "purchases.manage",
+    "inventory.manage",
     "banking.manage",
     "reports.view",
   ]),
