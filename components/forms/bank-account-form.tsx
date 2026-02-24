@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { createBankAccountAction } from "@/lib/actions/banking.actions";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,7 +47,7 @@ export function BankAccountForm({
     defaultValues: {
       name: "",
       account_number_masked: "",
-      currency_code: "GHS",
+      currency_code: DEFAULT_CURRENCY_CODE,
       gl_account_id: glAccounts[0]?.id ?? "",
     },
   });
@@ -99,9 +100,20 @@ export function BankAccountForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Currency</FormLabel>
-              <FormControl>
-                <Input maxLength={3} {...(field as any)} />
-              </FormControl>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {CURRENCY_OPTIONS.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      {currency.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

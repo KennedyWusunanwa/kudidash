@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createDraftInvoiceAction } from "@/lib/actions/invoices.actions";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { invoiceSchema } from "@/lib/validators/invoice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,14 +36,22 @@ interface Option {
   label: string;
 }
 
+interface InventoryItemOption {
+  value: string;
+  label: string;
+  revenueAccountId?: string | null;
+}
+
 export function InvoiceForm({
   orgId,
   customers,
   revenueAccounts,
+  inventoryItems = [],
 }: {
   orgId: string;
   customers: Option[];
   revenueAccounts: Option[];
+  inventoryItems?: InventoryItemOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -52,7 +61,7 @@ export function InvoiceForm({
       customer_id: customers[0]?.id ?? "",
       invoice_date: today,
       due_date: today,
-      currency_code: "GHS",
+      currency_code: DEFAULT_CURRENCY_CODE,
       notes: "",
       lines: [
         {
@@ -68,6 +77,10 @@ export function InvoiceForm({
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "lines" });
   const lines = useWatch({ control: form.control, name: "lines" });
+  const inventoryItemsByValue = useMemo(
+    () => new Map(inventoryItems.map((item) => [item.value, item])),
+    [inventoryItems]
+  );
   const totals = useMemo(() => {
     const subtotal = (lines ?? []).reduce(
       (sum, line) => sum + Number(line?.quantity ?? 0) * Number(line?.unit_price ?? 0),
@@ -134,9 +147,20 @@ export function InvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <FormControl>
-                      <Input maxLength={3} {...(field as any)} />
-                    </FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CURRENCY_OPTIONS.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -201,9 +225,42 @@ export function InvoiceForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="md:sr-only">Description</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Service description" {...(field as any)} />
-                        </FormControl>
+                        {inventoryItems.length ? (
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              const selectedItem = inventoryItemsByValue.get(value);
+                              if (selectedItem?.revenueAccountId) {
+                                form.setValue(
+                                  `lines.${index}.revenue_account_id`,
+                                  selectedItem.revenueAccountId,
+                                  {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  }
+                                );
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select product/item" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {inventoryItems.map((item) => (
+                                <SelectItem key={`${item.label}-${item.value}`} value={item.value}>
+                                  {item.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <FormControl>
+                            <Input placeholder="Service description" {...(field as any)} />
+                          </FormControl>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { DASHBOARD_COLOR_SCHEMES } from "@/lib/branding";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import {
   updateOrgAccountSettingsAction,
   updateOrgSettingsAction,
@@ -78,7 +79,7 @@ export function OrgSettingsForm({
     resolver: zodResolver(orgSettingsSchema),
     defaultValues: {
       name: org.name ?? "",
-      base_currency: org.base_currency ?? "GHS",
+      base_currency: org.base_currency ?? DEFAULT_CURRENCY_CODE,
       fiscal_year_start_month: org.fiscal_year_start_month ?? 1,
       dashboard_name: org.dashboard_name ?? "",
       dashboard_logo_url: org.dashboard_logo_url ?? "",
@@ -239,13 +240,24 @@ export function OrgSettingsForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Base currency</FormLabel>
-                <FormControl>
-                  <Input
-                    maxLength={3}
-                    {...(field as any)}
-                    disabled={!canManageOrgSettings || isPendingOrg}
-                  />
-                </FormControl>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={!canManageOrgSettings || isPendingOrg}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

@@ -7,8 +7,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { createOrgAction } from "@/lib/actions/org.actions";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -36,7 +44,7 @@ export function OrgCreateForm() {
   const [isPending, startTransition] = useTransition();
   const form = useForm<OrgFormInput>({
     resolver: zodResolver(orgFormSchema),
-    defaultValues: { name: "", slug: "", base_currency: "GHS" },
+    defaultValues: { name: "", slug: "", base_currency: DEFAULT_CURRENCY_CODE },
   });
 
   const onSubmit = (values: OrgFormInput) => {
@@ -88,9 +96,20 @@ export function OrgCreateForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Base currency</FormLabel>
-              <FormControl>
-                <Input maxLength={3} placeholder="GHS" {...(field as any)} />
-              </FormControl>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {CURRENCY_OPTIONS.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      {currency.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createDraftBillAction } from "@/lib/actions/bills.actions";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { billSchema } from "@/lib/validators/bill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +53,7 @@ export function BillForm({
       vendor_id: vendors[0]?.id ?? "",
       bill_date: today,
       due_date: today,
-      currency_code: "GHS",
+      currency_code: DEFAULT_CURRENCY_CODE,
       notes: "",
       lines: [
         {
@@ -134,9 +135,20 @@ export function BillForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <FormControl>
-                      <Input maxLength={3} {...(field as any)} />
-                    </FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CURRENCY_OPTIONS.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

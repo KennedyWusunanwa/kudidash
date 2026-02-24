@@ -1,5 +1,6 @@
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listCustomers } from "@/lib/data/invoices.data";
+import { listInventoryItems } from "@/lib/data/inventory.data";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 import { CustomerForm } from "@/components/forms/customer-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +11,10 @@ export default async function NewInvoicePage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [customers, accounts] = await Promise.all([
+  const [customers, accounts, inventoryItems] = await Promise.all([
     listCustomers(orgId),
     listAccountsForSelect(orgId),
+    listInventoryItems(orgId),
   ]);
 
   const revenueAccounts = accounts.filter(
@@ -46,6 +48,17 @@ export default async function NewInvoicePage({
           label: String(c.name),
         }))}
         revenueAccounts={revenueAccounts}
+        inventoryItems={(inventoryItems as Array<Record<string, unknown>>)
+          .filter((item) => item.is_active !== false)
+          .map((item) => ({
+            value: String(item.name ?? ""),
+            label: item.sku
+              ? `${String(item.sku)} - ${String(item.name ?? "")}`
+              : String(item.name ?? ""),
+            revenueAccountId:
+              typeof item.revenue_account_id === "string" ? item.revenue_account_id : null,
+          }))
+          .filter((item) => item.value)}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { accountSchema } from "@/lib/validators/account";
 import { createAccountAction, updateAccountAction } from "@/lib/actions/coa.actions";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import type { Account } from "@/types/accounting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ export function AccountForm({
       name: account?.name ?? "",
       type: (account?.type as AccountFormValues["type"]) ?? "asset",
       sub_type: (account?.sub_type as AccountFormValues["sub_type"]) ?? "other",
-      currency_code: account?.currency_code ?? "GHS",
+      currency_code: account?.currency_code ?? DEFAULT_CURRENCY_CODE,
       is_active: account?.is_active ?? true,
     },
   });
@@ -168,9 +169,20 @@ export function AccountForm({
           render={({ field }) => (
             <FormItem className="md:col-span-2">
               <FormLabel>Currency</FormLabel>
-              <FormControl>
-                <Input maxLength={3} {...(field as any)} />
-              </FormControl>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {CURRENCY_OPTIONS.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      {currency.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
