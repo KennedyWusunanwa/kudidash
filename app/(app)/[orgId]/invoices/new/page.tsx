@@ -57,6 +57,10 @@ export default async function NewInvoicePage({
               : String(item.name ?? ""),
             revenueAccountId:
               typeof item.revenue_account_id === "string" ? item.revenue_account_id : null,
+            salePrice:
+              typeof item.sale_price === "number"
+                ? item.sale_price
+                : Number(item.sale_price ?? 0),
           }))
           .filter((item) => item.value)}
       />

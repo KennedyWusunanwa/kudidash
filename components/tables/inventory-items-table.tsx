@@ -20,6 +20,8 @@ type InventoryRow = {
   id: string;
   sku: string;
   name: string;
+  sale_price?: number | null;
+  purchase_price?: number | null;
   valuation_method: string;
   is_active: boolean;
   created_at?: string;
@@ -73,6 +75,8 @@ export function InventoryItemsTable({
               <TableHead>SKU</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Valuation</TableHead>
+              <TableHead>Sale Price</TableHead>
+              <TableHead>Purchase Price</TableHead>
               <TableHead>Inventory Account</TableHead>
               <TableHead>COGS Account</TableHead>
               <TableHead>Revenue Account</TableHead>
@@ -90,6 +94,8 @@ export function InventoryItemsTable({
                   <TableCell className="capitalize">
                     {item.valuation_method.replace(/_/g, " ")}
                   </TableCell>
+                  <TableCell>{Number(item.sale_price ?? 0).toFixed(2)}</TableCell>
+                  <TableCell>{Number(item.purchase_price ?? 0).toFixed(2)}</TableCell>
                   <TableCell>{accountLabel(item.inventory_account)}</TableCell>
                   <TableCell>{accountLabel(item.cogs_account)}</TableCell>
                   <TableCell>{accountLabel(item.revenue_account)}</TableCell>
@@ -115,7 +121,7 @@ export function InventoryItemsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
                   No inventory items yet.
                 </TableCell>
               </TableRow>
@@ -137,6 +143,12 @@ export function InventoryItemsTable({
                     {item.valuation_method.replace(/_/g, " ")}
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
+                    Sale: {Number(item.sale_price ?? 0).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Purchase: {Number(item.purchase_price ?? 0).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
                     Inventory: {accountLabel(item.inventory_account)}
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -176,4 +188,3 @@ export function InventoryItemsTable({
     </>
   );
 }
-

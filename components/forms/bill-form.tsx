@@ -36,14 +36,23 @@ interface Option {
   label: string;
 }
 
+interface InventoryItemOption {
+  value: string;
+  label: string;
+  expenseAccountId?: string | null;
+  purchasePrice?: number | null;
+}
+
 export function BillForm({
   orgId,
   vendors,
   expenseAccounts,
+  inventoryItems = [],
 }: {
   orgId: string;
   vendors: Option[];
   expenseAccounts: Option[];
+  inventoryItems?: InventoryItemOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -69,6 +78,10 @@ export function BillForm({
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "lines" });
   const lines = useWatch({ control: form.control, name: "lines" });
+  const inventoryItemsByValue = useMemo(
+    () => new Map(inventoryItems.map((item) => [item.value, item])),
+    [inventoryItems]
+  );
   const totals = useMemo(() => {
     const subtotal = (lines ?? []).reduce(
       (sum, line) => sum + Number(line?.quantity ?? 0) * Number(line?.unit_cost ?? 0),
@@ -213,9 +226,52 @@ export function BillForm({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="md:sr-only">Description</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Expense description" {...(field as any)} />
-                        </FormControl>
+                        {inventoryItems.length ? (
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              const selectedItem = inventoryItemsByValue.get(value);
+                              if (selectedItem?.expenseAccountId) {
+                                form.setValue(
+                                  `lines.${index}.expense_account_id`,
+                                  selectedItem.expenseAccountId,
+                                  {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  }
+                                );
+                              }
+                              if (selectedItem && selectedItem.purchasePrice != null) {
+                                form.setValue(
+                                  `lines.${index}.unit_cost`,
+                                  Number(selectedItem.purchasePrice),
+                                  {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  }
+                                );
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select product/item" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {inventoryItems.map((item) => (
+                                <SelectItem key={`${item.label}-${item.value}`} value={item.value}>
+                                  {item.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <FormControl>
+                            <Input placeholder="Expense description" {...(field as any)} />
+                          </FormControl>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

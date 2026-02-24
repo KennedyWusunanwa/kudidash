@@ -411,6 +411,8 @@ create table if not exists public.inventory_items (
   org_id uuid not null references public.organizations(id) on delete cascade,
   sku text not null,
   name text not null,
+  sale_price numeric(18,2) not null default 0 check (sale_price >= 0),
+  purchase_price numeric(18,2) not null default 0 check (purchase_price >= 0),
   inventory_account_id uuid references public.chart_of_accounts(id),
   cogs_account_id uuid references public.chart_of_accounts(id),
   revenue_account_id uuid references public.chart_of_accounts(id),

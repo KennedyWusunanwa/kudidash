@@ -7,6 +7,8 @@ const demoInventoryItems = [
     org_id: "11111111-1111-4111-8111-111111111111",
     sku: "STATIONERY-001",
     name: "A4 Printing Paper Pack",
+    sale_price: 32.5,
+    purchase_price: 24,
     valuation_method: "weighted_average",
     is_active: true,
     inventory_account_id: null,
@@ -20,6 +22,8 @@ const demoInventoryItems = [
     org_id: "11111111-1111-4111-8111-111111111111",
     sku: "SERVICE-KIT-002",
     name: "Field Service Starter Kit",
+    sale_price: 180,
+    purchase_price: 120,
     valuation_method: "fifo",
     is_active: true,
     inventory_account_id: null,
@@ -47,4 +51,3 @@ export async function listInventoryItems(orgId: string) {
   if (error) throw error;
   return data ?? [];
 }
-

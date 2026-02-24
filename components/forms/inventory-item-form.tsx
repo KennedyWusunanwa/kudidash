@@ -47,6 +47,8 @@ export function InventoryItemForm({
     defaultValues: {
       sku: "",
       name: "",
+      sale_price: 0,
+      purchase_price: 0,
       inventory_account_id: "",
       cogs_account_id: "",
       revenue_account_id: "",
@@ -71,6 +73,8 @@ export function InventoryItemForm({
       form.reset({
         sku: "",
         name: "",
+        sale_price: 0,
+        purchase_price: 0,
         inventory_account_id: "",
         cogs_account_id: "",
         revenue_account_id: "",
@@ -132,6 +136,34 @@ export function InventoryItemForm({
                     <SelectItem value="specific_identification">Specific Identification</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="sale_price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sale price</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" min="0" {...(field as any)} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="purchase_price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purchase price</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" min="0" {...(field as any)} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -236,4 +268,3 @@ export function InventoryItemForm({
     </Form>
   );
 }
-

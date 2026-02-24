@@ -40,6 +40,7 @@ interface InventoryItemOption {
   value: string;
   label: string;
   revenueAccountId?: string | null;
+  salePrice?: number | null;
 }
 
 export function InvoiceForm({
@@ -240,6 +241,12 @@ export function InvoiceForm({
                                     shouldValidate: true,
                                   }
                                 );
+                              }
+                              if (selectedItem && selectedItem.salePrice != null) {
+                                form.setValue(`lines.${index}.unit_price`, Number(selectedItem.salePrice), {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
                               }
                             }}
                           >
