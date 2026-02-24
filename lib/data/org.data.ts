@@ -138,18 +138,50 @@ export async function listOrgMembers(orgId: string) {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("org_members")
-    .select("org_id, user_id, role, is_active, profiles:user_id(email, full_name)")
+    .select("org_id, user_id, role, is_active")
     .eq("org_id", orgId)
     .order("created_at", { ascending: true });
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
+  const memberRows = (data ?? []) as Array<{
+    org_id: string;
+    user_id: string;
+    role: Role;
+    is_active: boolean;
+  }>;
+
+  const userIds = Array.from(new Set(memberRows.map((row) => row.user_id).filter(Boolean)));
+  const profilesById = new Map<string, { email: string | null; full_name: string | null }>();
+
+  if (userIds.length) {
+    const { data: profileRows, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", userIds);
+
+    if (profilesError) {
+      // Keep the page usable even if profile lookup is blocked/misconfigured.
+      console.error("listOrgMembers profiles lookup failed", profilesError);
+    } else {
+      for (const profile of (profileRows ?? []) as Array<{
+        id: string;
+        email: string | null;
+        full_name: string | null;
+      }>) {
+        profilesById.set(profile.id, {
+          email: profile.email ?? null,
+          full_name: profile.full_name ?? null,
+        });
+      }
+    }
+  }
+
+  return memberRows.map((row) => ({
     org_id: row.org_id as string,
     user_id: row.user_id as string,
     role: row.role as Role,
     is_active: Boolean(row.is_active),
-    email: (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles)?.email ?? null,
-    full_name:
-      (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles)?.full_name ?? null,
+    email: profilesById.get(row.user_id)?.email ?? null,
+    full_name: profilesById.get(row.user_id)?.full_name ?? null,
   }));
 }
