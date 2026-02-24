@@ -7,6 +7,17 @@ export interface Organization {
   base_currency: string;
   fiscal_year_start_month: number;
   is_active: boolean;
+  dashboard_name?: string | null;
+  dashboard_logo_url?: string | null;
+  dashboard_color_scheme?:
+    | "default"
+    | "emerald"
+    | "indigo"
+    | "rose"
+    | "amber"
+    | "teal"
+    | "slate"
+    | null;
   created_at: string;
   updated_at: string;
 }

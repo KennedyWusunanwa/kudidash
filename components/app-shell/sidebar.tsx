@@ -32,18 +32,43 @@ function buildNav(orgId: string) {
   ];
 }
 
-export function Sidebar({ orgId }: { orgId: string }) {
+export function Sidebar({
+  orgId,
+  branding,
+}: {
+  orgId: string;
+  branding?: { dashboardName?: string | null; logoUrl?: string | null; orgName?: string | null };
+}) {
   const pathname = usePathname();
   const items = buildNav(orgId);
+  const dashboardName = branding?.dashboardName?.trim() || "KudiDash";
+  const logoUrl = branding?.logoUrl?.trim() || null;
 
   return (
     <aside className="hidden w-72 shrink-0 border-r bg-sidebar text-sidebar-foreground lg:flex">
       <div className="flex min-h-screen w-full flex-col">
         <div className="border-b px-5 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            KudiDash
+          <div className="flex items-center gap-3">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={`${dashboardName} logo`}
+                className="size-9 rounded-md border bg-background object-cover"
+              />
+            ) : (
+              <div className="flex size-9 items-center justify-center rounded-md border bg-background text-xs font-semibold">
+                {dashboardName.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="truncate text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {dashboardName}
+              </div>
+              <div className="truncate text-sm font-medium">
+                {branding?.orgName?.trim() || "Accounting Workspace"}
+              </div>
+            </div>
           </div>
-          <div className="mt-1 text-sm font-medium">Accounting Workspace</div>
         </div>
         <nav className="flex-1 space-y-1 p-3" aria-label="Primary navigation">
           {items.map((item) => {

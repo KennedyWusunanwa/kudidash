@@ -1,4 +1,9 @@
-import { getOrganizationById, getOrgAccountSettings } from "@/lib/data/org.data";
+import { roleHasPermission } from "@/lib/permissions";
+import {
+  getOrganizationById,
+  getOrgAccountSettings,
+  requireOrgMembership,
+} from "@/lib/data/org.data";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { OrgSettingsForm } from "@/components/forms/org-settings-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,18 +14,20 @@ export default async function SettingsPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [org, accountSettings, accountOptions] = await Promise.all([
+  const [membership, org, accountSettings, accountOptions] = await Promise.all([
+    requireOrgMembership(orgId),
     getOrganizationById(orgId),
     getOrgAccountSettings(orgId),
     listAccountsForSelect(orgId),
   ]);
+  const canManageOrgSettings = roleHasPermission(membership.role, "org.manage");
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Settings</h2>
         <p className="text-sm text-muted-foreground">
-          Organization configuration, control accounts, and module scaffolds.
+          Organization branding, accounting controls, and operational configuration.
         </p>
       </div>
 
@@ -35,11 +42,22 @@ export default async function SettingsPage({
               name: String(org?.name ?? ""),
               base_currency: String(org?.base_currency ?? "GHS"),
               fiscal_year_start_month: Number(org?.fiscal_year_start_month ?? 1),
+              dashboard_name:
+                typeof org?.dashboard_name === "string" ? String(org.dashboard_name) : "",
+              dashboard_logo_url:
+                typeof org?.dashboard_logo_url === "string"
+                  ? String(org.dashboard_logo_url)
+                  : "",
+              dashboard_color_scheme:
+                typeof org?.dashboard_color_scheme === "string"
+                  ? String(org.dashboard_color_scheme)
+                  : "default",
             }}
             accountSettings={
               (accountSettings as Record<string, string | null | undefined> | null) ?? undefined
             }
             accountOptions={accountOptions}
+            canManageOrgSettings={canManageOrgSettings}
           />
         </CardContent>
       </Card>
@@ -50,8 +68,8 @@ export default async function SettingsPage({
             <CardTitle className="text-base">Inventory (Scaffold)</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {/* UNSPECIFIED: inventory costing policy, stock locations, item master, and movement posting rules */}
-            Inventory module scaffolding is included in `lib/accounting/inventory.ts`. Configure valuation and posting rules before enabling.
+            Inventory item management is available. Configure costing policy, stock locations, and
+            movement posting rules before using automated inventory valuation postings.
           </CardContent>
         </Card>
         <Card>
@@ -59,8 +77,8 @@ export default async function SettingsPage({
             <CardTitle className="text-base">Fixed Assets (Scaffold)</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {/* UNSPECIFIED: asset classes, useful lives, depreciation books, and disposal workflows */}
-            Fixed asset scaffolding is included in `lib/accounting/fixed-assets.ts`. Depreciation postings are intentionally not enabled by default.
+            Fixed asset lifecycle logic is scaffolded in `lib/accounting/fixed-assets.ts`. Define
+            asset classes, useful lives, and depreciation posting rules before go-live.
           </CardContent>
         </Card>
         <Card>
@@ -68,8 +86,8 @@ export default async function SettingsPage({
             <CardTitle className="text-base">Payroll (Scaffold)</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {/* UNSPECIFIED: country-specific payroll taxes/statutory remittances. Country hooks declared in lib/accounting/payroll.ts */}
-            Payroll country hooks are marked `UNSPECIFIED` and must be implemented per jurisdiction before production use.
+            Payroll country hooks exist in `lib/accounting/payroll.ts`. Implement jurisdiction tax
+            and statutory remittance rules before production payroll processing.
           </CardContent>
         </Card>
       </div>

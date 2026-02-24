@@ -6,7 +6,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { isDemoMode } from "@/lib/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,17 +41,12 @@ export function AuthSignUpForm() {
 
   const onSubmit = (values: SignUpInput) => {
     startTransition(async () => {
-      if (isDemoMode()) {
-        toast.success(
-          "Demo mode: account registration is UNSPECIFIED. Redirecting to demo sign-in."
-        );
-        router.push("/sign-in");
-        return;
-      }
-
       const supabase = createSupabaseBrowserClient();
-      const redirectTo =
-        `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`;
+      const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(
+        /\/+$/,
+        ""
+      );
+      const redirectTo = `${baseUrl}/auth/callback`;
       const { error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,

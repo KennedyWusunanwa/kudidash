@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { DASHBOARD_COLOR_SCHEMES } from "@/lib/branding";
 import {
   updateOrgAccountSettingsAction,
   updateOrgSettingsAction,
@@ -31,6 +32,9 @@ const orgSettingsSchema = z.object({
   name: z.string().trim().min(2).max(120),
   base_currency: z.string().length(3),
   fiscal_year_start_month: z.coerce.number().int().min(1).max(12),
+  dashboard_name: z.string().trim().min(2).max(120).optional().or(z.literal("")),
+  dashboard_logo_url: z.string().url().optional().or(z.literal("")),
+  dashboard_color_scheme: z.enum(DASHBOARD_COLOR_SCHEMES),
 });
 
 const accountSettingsSchema = z.object({
@@ -45,17 +49,27 @@ const accountSettingsSchema = z.object({
 
 type OrgSettingsInput = z.input<typeof orgSettingsSchema>;
 type AccountSettingsInput = z.input<typeof accountSettingsSchema>;
+const UNMAPPED_VALUE = "__unmapped__";
 
 export function OrgSettingsForm({
   orgId,
   org,
   accountSettings,
   accountOptions,
+  canManageOrgSettings,
 }: {
   orgId: string;
-  org: { name: string; base_currency: string; fiscal_year_start_month?: number | null };
+  org: {
+    name: string;
+    base_currency: string;
+    fiscal_year_start_month?: number | null;
+    dashboard_name?: string | null;
+    dashboard_logo_url?: string | null;
+    dashboard_color_scheme?: string | null;
+  };
   accountSettings?: Partial<Record<keyof AccountSettingsInput, string | null>>;
   accountOptions: Array<{ id: string; label: string }>;
+  canManageOrgSettings: boolean;
 }) {
   const [isPendingOrg, startOrgTransition] = useTransition();
   const [isPendingMap, startMapTransition] = useTransition();
@@ -66,6 +80,12 @@ export function OrgSettingsForm({
       name: org.name ?? "",
       base_currency: org.base_currency ?? "GHS",
       fiscal_year_start_month: org.fiscal_year_start_month ?? 1,
+      dashboard_name: org.dashboard_name ?? "",
+      dashboard_logo_url: org.dashboard_logo_url ?? "",
+      dashboard_color_scheme:
+        (DASHBOARD_COLOR_SCHEMES as readonly string[]).includes(org.dashboard_color_scheme ?? "")
+          ? ((org.dashboard_color_scheme ?? "default") as any)
+          : "default",
     },
   });
 
@@ -137,8 +157,78 @@ export function OrgSettingsForm({
               <FormItem className="md:col-span-2">
                 <FormLabel>Organization name</FormLabel>
                 <FormControl>
-                  <Input {...(field as any)} />
+                  <Input {...(field as any)} disabled={!canManageOrgSettings || isPendingOrg} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="dashboard_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dashboard display name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="KudiDash"
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  This name appears in the dashboard shell navigation.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="dashboard_color_scheme"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dashboard color scheme</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={!canManageOrgSettings || isPendingOrg}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select color scheme" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {DASHBOARD_COLOR_SCHEMES.map((scheme) => (
+                      <SelectItem key={scheme} value={scheme}>
+                        {scheme.charAt(0).toUpperCase() + scheme.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="dashboard_logo_url"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Dashboard logo URL</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="https://yourcdn.com/logo.png"
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Public HTTPS image URL used in the sidebar/topbar branding.
+                </p>
                 <FormMessage />
               </FormItem>
             )}
@@ -150,7 +240,11 @@ export function OrgSettingsForm({
               <FormItem>
                 <FormLabel>Base currency</FormLabel>
                 <FormControl>
-                  <Input maxLength={3} {...(field as any)} />
+                  <Input
+                    maxLength={3}
+                    {...(field as any)}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -163,16 +257,29 @@ export function OrgSettingsForm({
               <FormItem>
                 <FormLabel>Fiscal year start month</FormLabel>
                 <FormControl>
-                  <Input type="number" min={1} max={12} {...(field as any)} />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={12}
+                    {...(field as any)}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
           <div className="md:col-span-2">
-            <Button type="submit" disabled={isPendingOrg}>
-              {isPendingOrg ? "Saving..." : "Save organization settings"}
-            </Button>
+            {canManageOrgSettings ? (
+              <Button type="submit" disabled={isPendingOrg}>
+                {isPendingOrg ? "Saving..." : "Save organization settings"}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Only organization `owner` and `admin` roles can update branding and organization
+                settings.
+              </p>
+            )}
           </div>
         </form>
       </Form>
@@ -187,14 +294,20 @@ export function OrgSettingsForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{label}</FormLabel>
-                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value || UNMAPPED_VALUE}
+                    onValueChange={(value) =>
+                      field.onChange(value === UNMAPPED_VALUE ? "" : value)
+                    }
+                    disabled={!canManageOrgSettings || isPendingMap}
+                  >
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Unmapped</SelectItem>
+                      <SelectItem value={UNMAPPED_VALUE}>Unmapped</SelectItem>
                       {accountOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
                           {option.label}
@@ -208,9 +321,11 @@ export function OrgSettingsForm({
             />
           ))}
           <div className="md:col-span-2">
-            <Button type="submit" disabled={isPendingMap}>
-              {isPendingMap ? "Saving..." : "Save control account mappings"}
-            </Button>
+            {canManageOrgSettings ? (
+              <Button type="submit" disabled={isPendingMap}>
+                {isPendingMap ? "Saving..." : "Save control account mappings"}
+              </Button>
+            ) : null}
           </div>
         </form>
       </Form>

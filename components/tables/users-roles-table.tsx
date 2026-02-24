@@ -20,9 +20,11 @@ type MemberRow = {
 export function UsersRolesTable({
   orgId,
   members,
+  canManageMembers,
 }: {
   orgId: string;
   members: MemberRow[];
+  canManageMembers: boolean;
 }) {
   return (
     <div className="rounded-lg border">
@@ -52,7 +54,11 @@ export function UsersRolesTable({
                 <TableCell className="capitalize">{member.role}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end">
-                    <MemberRoleInlineActions orgId={orgId} member={member} />
+                    <MemberRoleInlineActions
+                      orgId={orgId}
+                      member={member}
+                      canManageMembers={canManageMembers}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

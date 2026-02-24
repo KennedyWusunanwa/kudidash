@@ -5,5 +5,9 @@ export function isSupabaseConfigured() {
 }
 
 export function isDemoMode() {
-  return !isSupabaseConfigured();
+  return process.env.KUDIDASH_DEMO_MODE === "true";
+}
+
+export function isPublicSignupEnabled() {
+  return process.env.KUDIDASH_ALLOW_PUBLIC_SIGNUP === "true";
 }

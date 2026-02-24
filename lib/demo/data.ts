@@ -565,7 +565,7 @@ export function getDemoJournal(journalId: string) {
       id: journalId,
       journal_no: null,
       status: "draft",
-      memo: "Demo placeholder journal (no database persistence)",
+      memo: "Sample journal (demo mode; no database persistence)",
       reference: "JV-DEMO-PLACEHOLDER",
     } as (typeof demoJournals)[number]);
   return {
@@ -617,7 +617,7 @@ export function getDemoDashboardKpis() {
     expenses_mtd: 2120,
     ar: 4200,
     ap: 920,
-    note: "Demo mode values (placeholder; no Supabase).",
+    note: "Demo mode values (no Supabase connection).",
   };
 }
 

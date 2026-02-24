@@ -8,9 +8,11 @@ import {
   ActionResult,
   getServerSupabaseForOrg,
   parseActionError,
+  requireOrgPermission,
   revalidateOrgPaths,
 } from "@/lib/actions/_helpers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/data/org.data";
 
 const createOrgSchema = z.object({
@@ -38,6 +40,20 @@ const updateMemberRoleSchema = z.object({
 const disableMemberSchema = z.object({
   orgId: z.string().uuid(),
   user_id: z.string().uuid(),
+});
+
+const createManagedUserSchema = z.object({
+  orgId: z.string().uuid(),
+  email: z.string().email(),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  full_name: z.string().trim().max(120).optional().or(z.literal("")),
+  role: z.enum(["owner", "admin", "accountant", "approver", "viewer"]),
+});
+
+const setMemberPasswordSchema = z.object({
+  orgId: z.string().uuid(),
+  user_id: z.string().uuid(),
+  password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
 export async function createOrgAction(
@@ -149,6 +165,82 @@ export async function disableMemberAction(
       .eq("user_id", parsed.user_id);
     if (error) throw error;
     revalidateOrgPaths(parsed.orgId, ["/settings/users-roles"]);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: parseActionError(error) };
+  }
+}
+
+export async function createManagedUserAction(
+  input: z.infer<typeof createManagedUserSchema>
+): Promise<ActionResult<{ user_id: string }>> {
+  try {
+    const parsed = createManagedUserSchema.parse(input);
+
+    if (isDemoMode()) {
+      revalidateOrgPaths(parsed.orgId, ["/settings/users-roles"]);
+      return { success: true, data: { user_id: crypto.randomUUID() } };
+    }
+
+    await requireOrgPermission(parsed.orgId, "org.members.manage");
+
+    const adminClient = createSupabaseAdminClient();
+    const normalizedEmail = parsed.email.trim().toLowerCase();
+    const displayName = parsed.full_name?.trim() || null;
+
+    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password: parsed.password,
+      email_confirm: true,
+      user_metadata: displayName ? { full_name: displayName } : undefined,
+    });
+    if (createError) throw createError;
+
+    const userId = created.user?.id;
+    if (!userId) throw new Error("User creation succeeded but no user ID was returned.");
+
+    const { error: memberError } = await adminClient.from("org_members").upsert({
+      org_id: parsed.orgId,
+      user_id: userId,
+      role: parsed.role,
+      is_active: true,
+    });
+    if (memberError) {
+      await adminClient.auth.admin.deleteUser(userId);
+      throw memberError;
+    }
+
+    if (displayName) {
+      await adminClient
+        .from("profiles")
+        .upsert({ id: userId, email: normalizedEmail, full_name: displayName });
+    }
+
+    revalidateOrgPaths(parsed.orgId, ["/settings/users-roles"]);
+    return { success: true, data: { user_id: userId } };
+  } catch (error) {
+    return { success: false, error: parseActionError(error) };
+  }
+}
+
+export async function setMemberPasswordAction(
+  input: z.infer<typeof setMemberPasswordSchema>
+): Promise<ActionResult> {
+  try {
+    const parsed = setMemberPasswordSchema.parse(input);
+
+    if (isDemoMode()) {
+      return { success: true };
+    }
+
+    await requireOrgPermission(parsed.orgId, "org.members.manage");
+
+    const adminClient = createSupabaseAdminClient();
+    const { error } = await adminClient.auth.admin.updateUserById(parsed.user_id, {
+      password: parsed.password,
+    });
+    if (error) throw error;
+
     return { success: true };
   } catch (error) {
     return { success: false, error: parseActionError(error) };

@@ -31,7 +31,7 @@ export async function getDashboardKpis(orgId: string, asOf = new Date()) {
       expenses_mtd: 0,
       ar: 0,
       ap: 0,
-      note: "UNSPECIFIED: dashboard KPI RPC unavailable; using zeros.",
+      note: "Dashboard KPI RPC unavailable; using zeros.",
     };
   }
 

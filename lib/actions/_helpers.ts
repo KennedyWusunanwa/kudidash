@@ -27,7 +27,7 @@ export async function getServerSupabaseForOrg(orgId: string, permission?: Permis
 
   if (isDemoMode()) {
     throw new Error(
-      "Demo mode placeholder: Supabase mutations are unavailable. Action should short-circuit."
+      "Demo mode is enabled. Supabase mutations are disabled and must be handled by demo-safe actions."
     );
   }
 

@@ -58,9 +58,15 @@ create table if not exists public.organizations (
   base_currency text not null default 'GHS',
   fiscal_year_start_month int not null default 1 check (fiscal_year_start_month between 1 and 12),
   is_active boolean not null default true,
+  dashboard_name text,
+  dashboard_logo_url text,
+  dashboard_color_scheme text not null default 'default',
   created_by uuid references auth.users(id),
   created_at timestamptz not null default timezone('utc', now()),
-  updated_at timestamptz not null default timezone('utc', now())
+  updated_at timestamptz not null default timezone('utc', now()),
+  check (
+    dashboard_color_scheme in ('default', 'emerald', 'indigo', 'rose', 'amber', 'teal', 'slate')
+  )
 );
 
 create table if not exists public.org_members (

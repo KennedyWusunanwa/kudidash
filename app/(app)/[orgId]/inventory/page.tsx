@@ -25,8 +25,8 @@ export default async function InventoryPage({
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Inventory</h2>
           <p className="text-sm text-muted-foreground">
-            Manage inventory items and account mappings. Inventory movements are scaffolded and
-            marked UNSPECIFIED in this release.
+            Manage inventory items and account mappings. Inventory movement posting rules can be
+            configured as you enable stock operations.
           </p>
         </div>
       </div>
@@ -51,4 +51,3 @@ export default async function InventoryPage({
     </div>
   );
 }
-

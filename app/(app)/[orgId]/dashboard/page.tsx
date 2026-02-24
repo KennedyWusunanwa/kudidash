@@ -38,7 +38,11 @@ export default async function DashboardPage({
   return (
     <div className="space-y-6">
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <KpiCard title="Cash" value={Number(kpis.cash ?? 0)} description="UNSPECIFIED mapping uses org account settings." />
+        <KpiCard
+          title="Cash"
+          value={Number(kpis.cash ?? 0)}
+          description="Mapped from cash/bank accounts and org account settings"
+        />
         <KpiCard
           title="Revenue MTD"
           value={Number(kpis.revenue_mtd ?? 0)}

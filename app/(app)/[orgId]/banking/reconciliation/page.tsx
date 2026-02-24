@@ -33,7 +33,8 @@ export default async function BankingReconciliationPage({
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Bank Reconciliation</h2>
         <p className="text-sm text-muted-foreground">
-          Import transactions, start reconciliation sessions, and match entries. Matching UX is scaffolded with `UNSPECIFIED` candidate scoring.
+          Import transactions, start reconciliation sessions, and match entries. Matching supports
+          manual linking and can be extended with automated candidate scoring.
         </p>
       </div>
 

@@ -198,7 +198,7 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
       }).format(generated)}`,
       { x: MARGIN, y: MARGIN - 22, font, size: 8, color: muted }
     );
-    p.drawText("UNSPECIFIED: payment instructions / bank details", {
+    p.drawText("Configure payment instructions in organization invoice settings", {
       x: PAGE.width - MARGIN - 215,
       y: MARGIN - 22,
       font,
@@ -464,4 +464,3 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
 
   return pdf.save();
 }
-

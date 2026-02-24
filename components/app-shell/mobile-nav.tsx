@@ -27,7 +27,13 @@ function navItems(orgId: string) {
   ];
 }
 
-export function MobileNav({ orgId }: { orgId: string }) {
+export function MobileNav({
+  orgId,
+  dashboardName,
+}: {
+  orgId: string;
+  dashboardName?: string | null;
+}) {
   const pathname = usePathname();
   const items = navItems(orgId);
 
@@ -46,7 +52,7 @@ export function MobileNav({ orgId }: { orgId: string }) {
       </SheetTrigger>
       <SheetContent side="left" className="w-[20rem]">
         <SheetHeader>
-          <SheetTitle>KudiDash</SheetTitle>
+          <SheetTitle>{dashboardName?.trim() || "KudiDash"}</SheetTitle>
         </SheetHeader>
         <nav className="mt-6 space-y-1" aria-label="Mobile navigation">
           {items.map((item) => {

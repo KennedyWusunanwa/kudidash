@@ -6,7 +6,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { isDemoMode } from "@/lib/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,14 +37,6 @@ export function AuthSignInForm() {
 
   const onSubmit = (values: SignInInput) => {
     startTransition(async () => {
-      if (isDemoMode()) {
-        toast.success("Demo mode sign-in enabled. Using local placeholder session.");
-        const next = params.get("next") || "/select-org";
-        router.push(next);
-        router.refresh();
-        return;
-      }
-
       const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithPassword(values);
       if (error) {
@@ -94,15 +85,8 @@ export function AuthSignInForm() {
           <Button
             type="button"
             variant="outline"
-            disabled={loadingMagicLink}
-            onClick={async () => {
-              if (isDemoMode()) {
-                toast.success("Demo mode: magic link is UNSPECIFIED. Redirecting to demo workspace.");
-                router.push("/select-org");
-                router.refresh();
-                return;
-              }
-
+          disabled={loadingMagicLink}
+          onClick={async () => {
               const email = form.getValues("email");
               if (!email) {
                 toast.error("Enter your email first.");
@@ -110,11 +94,14 @@ export function AuthSignInForm() {
               }
               setLoadingMagicLink(true);
               const supabase = createSupabaseBrowserClient();
-              const redirectTo =
-                `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`;
+              const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(
+                /\/+$/,
+                ""
+              );
+              const redirectTo = `${baseUrl}/auth/callback`;
               const { error } = await supabase.auth.signInWithOtp({
                 email,
-                options: { emailRedirectTo: redirectTo },
+                options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
               });
               setLoadingMagicLink(false);
               if (error) {
