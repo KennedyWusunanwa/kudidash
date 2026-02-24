@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabaseBrowserClient, getSupabaseBrowserConfigIssue } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,23 +41,33 @@ export function AuthSignUpForm() {
 
   const onSubmit = (values: SignUpInput) => {
     startTransition(async () => {
-      const supabase = createSupabaseBrowserClient();
-      const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(
-        /\/+$/,
-        ""
-      );
-      const redirectTo = `${baseUrl}/auth/callback`;
-      const { error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: { emailRedirectTo: redirectTo },
-      });
-      if (error) {
-        toast.error(error.message);
-        return;
+      try {
+        const configIssue = getSupabaseBrowserConfigIssue();
+        if (configIssue) {
+          toast.error(configIssue);
+          return;
+        }
+
+        const supabase = createSupabaseBrowserClient();
+        const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(
+          /\/+$/,
+          ""
+        );
+        const redirectTo = `${baseUrl}/auth/callback`;
+        const { error } = await supabase.auth.signUp({
+          email: values.email,
+          password: values.password,
+          options: { emailRedirectTo: redirectTo },
+        });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        toast.success("Account created. Check email if confirmation is enabled.");
+        router.push("/sign-in");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Sign-up failed.");
       }
-      toast.success("Account created. Check email if confirmation is enabled.");
-      router.push("/sign-in");
     });
   };
 

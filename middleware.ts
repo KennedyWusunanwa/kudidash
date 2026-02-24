@@ -10,6 +10,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (req.nextUrl.pathname.startsWith("/auth/v1/")) {
+    return NextResponse.json(
+      {
+        error:
+          "Supabase auth request reached the app server. Check NEXT_PUBLIC_SUPABASE_URL and set it to https://<project-ref>.supabase.co.",
+      },
+      { status: 500 }
+    );
+  }
+
   const res = NextResponse.next();
 
   const supabase = createServerClient(

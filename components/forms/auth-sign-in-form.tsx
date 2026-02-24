@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabaseBrowserClient, getSupabaseBrowserConfigIssue } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,15 +37,25 @@ export function AuthSignInForm() {
 
   const onSubmit = (values: SignInInput) => {
     startTransition(async () => {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword(values);
-      if (error) {
-        toast.error(error.message);
-        return;
+      try {
+        const configIssue = getSupabaseBrowserConfigIssue();
+        if (configIssue) {
+          toast.error(configIssue);
+          return;
+        }
+
+        const supabase = createSupabaseBrowserClient();
+        const { error } = await supabase.auth.signInWithPassword(values);
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        const next = params.get("next") || "/select-org";
+        router.push(next);
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Sign-in failed.");
       }
-      const next = params.get("next") || "/select-org";
-      router.push(next);
-      router.refresh();
     });
   };
 
@@ -87,6 +97,13 @@ export function AuthSignInForm() {
             variant="outline"
           disabled={loadingMagicLink}
           onClick={async () => {
+              try {
+                const configIssue = getSupabaseBrowserConfigIssue();
+                if (configIssue) {
+                  toast.error(configIssue);
+                  return;
+                }
+
               const email = form.getValues("email");
               if (!email) {
                 toast.error("Enter your email first.");
@@ -109,6 +126,10 @@ export function AuthSignInForm() {
                 return;
               }
               toast.success("Magic link sent.");
+              } catch (error) {
+                setLoadingMagicLink(false);
+                toast.error(error instanceof Error ? error.message : "Failed to send magic link.");
+              }
             }}
           >
             {loadingMagicLink ? "Sending..." : "Send magic link"}
