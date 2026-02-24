@@ -1381,7 +1381,8 @@ drop policy if exists organizations_delete on public.organizations;
 
 create policy organizations_select on public.organizations
 for select using (
-  exists (
+  created_by = auth.uid()
+  or exists (
     select 1 from public.org_members om
     where om.org_id = id
       and om.user_id = auth.uid()
