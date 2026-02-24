@@ -36,6 +36,12 @@ export async function getServerSupabaseForOrg(orgId: string, permission?: Permis
 
 export function parseActionError(error: unknown) {
   if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
   return "Unexpected error.";
 }
 

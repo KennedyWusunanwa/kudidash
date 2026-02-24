@@ -69,28 +69,30 @@ export async function createOrgAction(
     const user = await getCurrentUser();
     if (!user) throw new Error("Not authenticated.");
 
-    const { data: org, error: orgError } = await supabase
+    const orgId = crypto.randomUUID();
+
+    const { error: orgError } = await supabase
       .from("organizations")
       .insert({
+        id: orgId,
         name: parsed.name,
         slug: parsed.slug,
         base_currency: parsed.base_currency.toUpperCase(),
+        created_by: user.id,
       })
-      .select("id")
-      .single();
     if (orgError) throw orgError;
 
     const { error: memberError } = await supabase.from("org_members").insert({
-      org_id: org.id,
+      org_id: orgId,
       user_id: user.id,
       role: "owner",
       is_active: true,
     });
     if (memberError) throw memberError;
 
-    await supabase.from("org_account_settings").upsert({ org_id: org.id });
+    await supabase.from("org_account_settings").upsert({ org_id: orgId });
 
-    return { success: true, data: { orgId: org.id as string } };
+    return { success: true, data: { orgId } };
   } catch (error) {
     return { success: false, error: parseActionError(error) };
   }
