@@ -161,6 +161,90 @@ function pushMultiline(target: string[], value?: string | null) {
   }
 }
 
+function parseDate(value: string | null | undefined) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+function dueDateWithTerms(invoiceDate: string | null | undefined, dueDate: string | null | undefined) {
+  const due = parseDate(dueDate);
+  if (!due) return "-";
+  const dueLabel = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(due);
+
+  const inv = parseDate(invoiceDate);
+  if (!inv) return dueLabel;
+
+  const diffMs = due.getTime() - inv.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  if (Number.isFinite(diffDays) && diffDays > 0 && diffDays <= 3650) {
+    return `${dueLabel} (Net ${diffDays})`;
+  }
+
+  return dueLabel;
+}
+
+function drawTextRight(
+  page: PDFPage,
+  value: string,
+  rightX: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  color: ReturnType<typeof rgb>
+) {
+  const safe = value || "";
+  const width = font.widthOfTextAtSize(safe, size);
+  page.drawText(safe, { x: rightX - width, y, font, size, color });
+}
+
+function drawTextCenter(
+  page: PDFPage,
+  value: string,
+  centerX: number,
+  y: number,
+  font: PDFFont,
+  size: number,
+  color: ReturnType<typeof rgb>
+) {
+  const safe = value || "";
+  const width = font.widthOfTextAtSize(safe, size);
+  page.drawText(safe, { x: centerX - width / 2, y, font, size, color });
+}
+
+function drawRule(
+  page: PDFPage,
+  x1: number,
+  x2: number,
+  y: number,
+  color: ReturnType<typeof rgb>,
+  thickness = 1
+) {
+  page.drawLine({
+    start: { x: x1, y },
+    end: { x: x2, y },
+    thickness,
+    color,
+  });
+}
+
+function drawVRule(
+  page: PDFPage,
+  x: number,
+  y1: number,
+  y2: number,
+  color: ReturnType<typeof rgb>,
+  thickness = 1
+) {
+  page.drawLine({
+    start: { x, y: y1 },
+    end: { x, y: y2 },
+    thickness,
+    color,
+  });
+}
+
 export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -171,305 +255,299 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
     payload.org.invoice_logo_url || payload.org.dashboard_logo_url || null
   );
 
-  const brand = rgb(0.12, 0.27, 0.5);
-  const text = rgb(0.12, 0.12, 0.12);
-  const muted = rgb(0.45, 0.45, 0.45);
-  const border = rgb(0.86, 0.88, 0.91);
-  const headerBg = rgb(0.95, 0.97, 0.99);
+  const text = rgb(0.16, 0.17, 0.2);
+  const muted = rgb(0.33, 0.35, 0.39);
+  const rule = rgb(0.78, 0.79, 0.82);
+  const tableHeaderFill = rgb(0.92, 0.92, 0.93);
+  const headerTitle = rgb(0.14, 0.15, 0.18);
+
+  const contentX = MARGIN;
+  const contentWidth = PAGE.width - MARGIN * 2;
+  const rightEdge = PAGE.width - MARGIN;
+  const currency = payload.invoice.currency_code || payload.org.base_currency || "GHS";
+  const invoiceDisplayNo = payload.invoice.invoice_no || payload.invoice.id;
+  const statusLabel = (payload.invoice.status || "draft").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+
+  const companyLines: string[] = [companyName];
+  pushMultiline(companyLines, payload.org.invoice_company_address || null);
+  if (payload.org.invoice_company_phone?.trim()) companyLines.push(`Phone: ${payload.org.invoice_company_phone.trim()}`);
+  if (payload.org.invoice_company_email?.trim()) companyLines.push(`Email: ${payload.org.invoice_company_email.trim()}`);
+  if (payload.org.invoice_company_tax_id?.trim()) companyLines.push(`Tax ID: ${payload.org.invoice_company_tax_id.trim()}`);
+  if (companyLines.length === 1 && payload.org.slug) companyLines.push(`Org: ${payload.org.slug}`);
+
+  const customer = payload.customer ?? null;
+  const billToLines: string[] = [customer?.name?.trim() || "Customer"];
+  if (customer?.email?.trim()) billToLines.push(customer.email.trim());
+  if (customer?.phone?.trim()) billToLines.push(customer.phone.trim());
+  pushMultiline(billToLines, customer?.billing_address || null);
+  if (customer?.tax_id?.trim()) billToLines.push(`Tax ID: ${customer.tax_id.trim()}`);
 
   let page = pdf.addPage([PAGE.width, PAGE.height]);
-  let y = PAGE.height - MARGIN;
+  let y = PAGE.height - 42;
 
-  const newPage = () => {
+  const newPage = (forTableContinuation = false) => {
     page = pdf.addPage([PAGE.width, PAGE.height]);
-    y = PAGE.height - MARGIN;
-    drawPageHeader(false);
-  };
-
-  const ensureSpace = (needed: number) => {
-    if (y - needed < MARGIN) newPage();
-  };
-
-  const drawLabelValue = (
-    label: string,
-    value: string,
-    x: number,
-    yy: number,
-    width: number
-  ) => {
-    page.drawText(label, {
-      x,
-      y: yy,
-      font,
-      size: 9,
-      color: muted,
+    y = PAGE.height - 42;
+    page.drawText(companyName, {
+      x: contentX,
+      y,
+      font: bold,
+      size: 12,
+      color: text,
     });
-    const valueLines = wrapText(value || "-", font, 10, width);
-    let localY = yy - 13;
-    for (const line of valueLines) {
-      page.drawText(line, { x, y: localY, font, size: 10, color: text });
-      localY -= 12;
-    }
-    return localY;
+    drawTextRight(
+      page,
+      `Invoice ${invoiceDisplayNo}${forTableContinuation ? " (continued)" : ""}`,
+      rightEdge,
+      y + 1,
+      font,
+      9,
+      muted
+    );
+    y -= 14;
+    drawRule(page, contentX, rightEdge, y, rule);
+    y -= 18;
   };
 
-  const drawPageHeader = (isFirstPage: boolean) => {
-    if (isFirstPage) {
-      let titleX = MARGIN;
-      if (logoImage) {
-        const scaled = logoImage.scale(1);
-        const maxWidth = 96;
-        const maxHeight = 42;
-        const scale = Math.min(maxWidth / scaled.width, maxHeight / scaled.height, 1);
-        const width = scaled.width * scale;
-        const height = scaled.height * scale;
+  const ensureSpace = (needed: number, forTableContinuation = false) => {
+    if (y - needed < 56) {
+      newPage(forTableContinuation);
+      return true;
+    }
+    return false;
+  };
 
-        page.drawImage(logoImage, {
-          x: MARGIN,
-          y: y - height + 8,
-          width,
-          height,
-        });
-        titleX += width + 12;
-      }
+  const firstHeaderBottom = (() => {
+    const topY = y;
 
-      page.drawText("INVOICE", {
-        x: titleX,
-        y,
-        font: bold,
-        size: 22,
-        color: brand,
+    if (logoImage) {
+      const dims = logoImage.scale(1);
+      const maxWidth = 210;
+      const maxHeight = 62;
+      const scale = Math.min(maxWidth / dims.width, maxHeight / dims.height, 1);
+      const width = dims.width * scale;
+      const height = dims.height * scale;
+      page.drawImage(logoImage, {
+        x: contentX,
+        y: topY - height + 8,
+        width,
+        height,
       });
-      page.drawText(companyName, {
-        x: PAGE.width - MARGIN - 220,
-        y: y + 2,
-        font: bold,
-        size: 12,
-        color: text,
-      });
-      page.drawText(`Org ID: ${payload.org.id}`, {
-        x: PAGE.width - MARGIN - 220,
-        y: y - 13,
-        font,
-        size: 9,
-        color: muted,
-      });
-      y -= 34;
     } else {
       page.drawText(companyName, {
-        x: MARGIN,
-        y,
+        x: contentX,
+        y: topY - 2,
         font: bold,
-        size: 11,
+        size: 20,
         color: text,
       });
-      page.drawText(
-        `Invoice ${payload.invoice.invoice_no || payload.invoice.id.slice(0, 8)} (continued)`,
-        {
-          x: PAGE.width - MARGIN - 220,
-          y,
-          font,
-          size: 9,
-          color: muted,
-        }
-      );
-      y -= 20;
     }
-  };
 
-  const drawFooter = (p: PDFPage) => {
-    p.drawLine({
-      start: { x: MARGIN, y: MARGIN - 6 },
-      end: { x: PAGE.width - MARGIN, y: MARGIN - 6 },
-      thickness: 1,
-      color: border,
+    const headerLineY = topY - 52;
+    drawRule(page, contentX, rightEdge, headerLineY, rule);
+    drawTextCenter(page, "INVOICE", PAGE.width / 2, headerLineY - 44, bold, 28, headerTitle);
+    const titleBottomLineY = headerLineY - 64;
+    drawRule(page, contentX, rightEdge, titleBottomLineY, rule);
+    return titleBottomLineY;
+  })();
+
+  y = firstHeaderBottom - 28;
+
+  const columnGap = 22;
+  const leftColX = contentX;
+  const leftColWidth = 245;
+  const rightColX = leftColX + leftColWidth + columnGap;
+  const rightColWidth = rightEdge - rightColX;
+
+  const drawCompanyBlock = () => {
+    let localY = y;
+    page.drawText(companyLines[0] || companyName, {
+      x: leftColX,
+      y: localY,
+      font: bold,
+      size: 14,
+      color: text,
     });
-    const generated = payload.generatedAt ?? new Date();
-    p.drawText(
-      `Generated ${new Intl.DateTimeFormat("en-US", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(generated)}`,
-      { x: MARGIN, y: MARGIN - 22, font, size: 8, color: muted }
-    );
-    p.drawText("Configure payment instructions in organization invoice settings", {
-      x: PAGE.width - MARGIN - 215,
-      y: MARGIN - 22,
-      font,
-      size: 8,
-      color: muted,
-    });
-  };
+    localY -= 22;
 
-  drawPageHeader(true);
-
-  // Metadata panel
-  ensureSpace(110);
-  page.drawRectangle({
-    x: MARGIN,
-    y: y - 92,
-    width: PAGE.width - MARGIN * 2,
-    height: 92,
-    borderColor: border,
-    borderWidth: 1,
-    color: rgb(1, 1, 1),
-  });
-
-  const metaTop = y - 16;
-  const leftX = MARGIN + 14;
-  const midX = MARGIN + (PAGE.width - MARGIN * 2) / 2 + 6;
-  drawLabelValue(
-    "Invoice Number",
-    payload.invoice.invoice_no || payload.invoice.id,
-    leftX,
-    metaTop,
-    220
-  );
-  drawLabelValue("Status", (payload.invoice.status || "draft").toUpperCase(), leftX, metaTop - 35, 220);
-  drawLabelValue("Invoice Date", dateFmt(payload.invoice.invoice_date || null), midX, metaTop, 180);
-  drawLabelValue("Due Date", dateFmt(payload.invoice.due_date || null), midX, metaTop - 35, 180);
-  y -= 108;
-
-  // Bill-to and issuer blocks
-  const partyBoxHeight = 154;
-  ensureSpace(partyBoxHeight + 22);
-  const boxWidth = (PAGE.width - MARGIN * 2 - 12) / 2;
-  page.drawRectangle({
-    x: MARGIN,
-    y: y - partyBoxHeight,
-    width: boxWidth,
-    height: partyBoxHeight,
-    borderColor: border,
-    borderWidth: 1,
-    color: rgb(1, 1, 1),
-  });
-  page.drawRectangle({
-    x: MARGIN + boxWidth + 12,
-    y: y - partyBoxHeight,
-    width: boxWidth,
-    height: partyBoxHeight,
-    borderColor: border,
-    borderWidth: 1,
-    color: rgb(1, 1, 1),
-  });
-  page.drawText("Bill To", {
-    x: MARGIN + 12,
-    y: y - 16,
-    font: bold,
-    size: 11,
-    color: brand,
-  });
-  page.drawText("From", {
-    x: MARGIN + boxWidth + 24,
-    y: y - 16,
-    font: bold,
-    size: 11,
-    color: brand,
-  });
-
-  let leftY = y - 34;
-  const customer = payload.customer ?? null;
-  const customerLines: string[] = [customer?.name || "Customer"];
-  pushMultiline(customerLines, customer?.email || null);
-  pushMultiline(customerLines, customer?.phone || null);
-  pushMultiline(customerLines, customer?.billing_address || null);
-  pushMultiline(customerLines, customer?.tax_id ? `Tax ID: ${customer.tax_id}` : null);
-  for (const line of customerLines) {
-    for (const wrapped of wrapText(line, font, 10, boxWidth - 24)) {
-      page.drawText(wrapped, { x: MARGIN + 12, y: leftY, font, size: 10, color: text });
-      leftY -= 12;
-    }
-  }
-
-  let rightY = y - 34;
-  const issuerLines: string[] = [companyName];
-  pushMultiline(issuerLines, payload.org.invoice_company_address || null);
-  pushMultiline(
-    issuerLines,
-    payload.org.invoice_company_phone ? `Phone: ${payload.org.invoice_company_phone}` : null
-  );
-  pushMultiline(
-    issuerLines,
-    payload.org.invoice_company_email ? `Email: ${payload.org.invoice_company_email}` : null
-  );
-  pushMultiline(
-    issuerLines,
-    payload.org.invoice_company_tax_id ? `Tax ID: ${payload.org.invoice_company_tax_id}` : null
-  );
-  issuerLines.push(
-    `Base Currency: ${payload.org.base_currency || payload.invoice.currency_code || "GHS"}`
-  );
-  if (!payload.org.invoice_company_address && payload.org.slug) {
-    issuerLines.push(`Org: ${payload.org.slug}`);
-  }
-
-  for (const line of issuerLines) {
-    for (const wrapped of wrapText(line, font, 10, boxWidth - 24)) {
-      page.drawText(wrapped, {
-        x: MARGIN + boxWidth + 24,
-        y: rightY,
+    const detailItems = companyLines.slice(1);
+    if (!detailItems.length) {
+      page.drawText(`Base Currency: ${payload.org.base_currency || currency}`, {
+        x: leftColX,
+        y: localY,
         font,
-        size: 10,
+        size: 11,
+        color: muted,
+      });
+      return y - localY + 14;
+    }
+
+    for (let i = 0; i < detailItems.length; i += 1) {
+      const wrapped = wrapText(detailItems[i] || "-", font, 10.5, leftColWidth - 8);
+      for (const line of wrapped) {
+        page.drawText(line, { x: leftColX, y: localY, font, size: 10.5, color: text });
+        localY -= 13;
+      }
+      if (i < detailItems.length - 1) {
+        drawRule(page, leftColX, leftColX + leftColWidth - 4, localY + 2, rule);
+        localY -= 10;
+      }
+    }
+    return y - localY + 4;
+  };
+
+  const drawMetaBlock = () => {
+    const labelWidth = 86;
+    let localY = y + 2;
+    const rows = [
+      { label: "Invoice Number:", value: invoiceDisplayNo, valueBold: false },
+      { label: "Invoice Date:", value: dateFmt(payload.invoice.invoice_date || null), valueBold: false },
+      { label: "Due Date:", value: dueDateWithTerms(payload.invoice.invoice_date || null, payload.invoice.due_date || null), valueBold: false },
+      { label: "Status:", value: statusLabel, valueBold: true },
+    ] as const;
+
+    for (const row of rows) {
+      const valueFont = row.valueBold ? bold : font;
+      const valueLines = wrapText(row.value || "-", valueFont, 10.5, rightColWidth - labelWidth - 10);
+      const rowHeight = Math.max(28, valueLines.length * 13 + 8);
+      page.drawText(row.label, {
+        x: rightColX,
+        y: localY - 18,
+        font,
+        size: 10.5,
+        color: muted,
+      });
+      let valueY = localY - 18;
+      for (const valueLine of valueLines) {
+        page.drawText(valueLine, {
+          x: rightColX + labelWidth,
+          y: valueY,
+          font: valueFont,
+          size: 10.5,
+          color: text,
+        });
+        valueY -= 13;
+      }
+      drawRule(page, rightColX, rightEdge, localY - rowHeight, rule);
+      localY -= rowHeight;
+    }
+
+    return y - localY + 2;
+  };
+
+  const companyBlockHeight = drawCompanyBlock();
+  const metaBlockHeight = drawMetaBlock();
+  y -= Math.max(companyBlockHeight, metaBlockHeight) + 24;
+
+  drawRule(page, contentX, rightEdge, y, rule);
+  y -= 34;
+
+  page.drawText("Bill To:", {
+    x: contentX,
+    y,
+    font: bold,
+    size: 12,
+    color: text,
+  });
+  y -= 26;
+
+  for (let i = 0; i < billToLines.length; i += 1) {
+    const line = billToLines[i] || "-";
+    const wrapped = wrapText(line, i === 0 ? bold : font, i === 0 ? 12 : 10.5, 260);
+    for (const part of wrapped) {
+      page.drawText(part, {
+        x: contentX,
+        y,
+        font: i === 0 ? bold : font,
+        size: i === 0 ? 12 : 10.5,
         color: text,
       });
-      rightY -= 12;
+      y -= i === 0 ? 14 : 13;
     }
   }
-  y -= partyBoxHeight + 14;
 
-  // Lines table
-  const currency = payload.invoice.currency_code || payload.org.base_currency || "GHS";
-  ensureSpace(44);
-  const tableX = MARGIN;
-  const tableWidth = PAGE.width - MARGIN * 2;
-  const cols = {
-    line: 28,
-    desc: 220,
-    qty: 62,
+  y -= 18;
+
+  const tableX = contentX;
+  const tableWidth = contentWidth;
+  const tableCols = {
+    line: 34,
+    desc: 214,
+    qty: 54,
     unit: 88,
-    tax: 72,
-    total: tableWidth - (28 + 220 + 62 + 88 + 72),
+    tax: 64,
+    total: tableWidth - (34 + 214 + 54 + 88 + 64),
+  };
+  type TableColKey = keyof typeof tableCols;
+
+  const headerHeight = 24;
+  const tableHeaders = [
+    { key: "line", label: "#", align: "left" as const },
+    { key: "desc", label: "Description", align: "left" as const },
+    { key: "qty", label: "Qty", align: "right" as const },
+    { key: "unit", label: "Unit Price", align: "right" as const },
+    { key: "tax", label: "Tax", align: "right" as const },
+    { key: "total", label: "Total", align: "right" as const },
+  ] satisfies Array<{ key: TableColKey; label: string; align: "left" | "right" }>;
+
+  const drawTableFrameVerticals = (topY: number, height: number) => {
+    let offset = 0;
+    for (const width of Object.values(tableCols)) {
+      drawVRule(page, tableX + offset, topY, topY - height, rule);
+      offset += width;
+    }
+    drawVRule(page, tableX + tableWidth, topY, topY - height, rule);
   };
 
   const drawTableHeader = () => {
-    ensureSpace(28);
     page.drawRectangle({
       x: tableX,
-      y: y - 22,
+      y: y - headerHeight,
       width: tableWidth,
-      height: 22,
-      borderColor: border,
+      height: headerHeight,
+      color: tableHeaderFill,
+      borderColor: rule,
       borderWidth: 1,
-      color: headerBg,
     });
-    let x = tableX + 6;
-    const headers = [
-      ["#", cols.line - 12],
-      ["Description", cols.desc],
-      ["Qty", cols.qty],
-      ["Unit", cols.unit],
-      ["Tax", cols.tax],
-      ["Total", cols.total - 8],
-    ] as const;
-    for (const [label, width] of headers) {
-      page.drawText(label, { x, y: y - 14, font: bold, size: 9, color: text });
-      x += width;
+
+    let colX = tableX;
+    for (const header of tableHeaders) {
+      const width = tableCols[header.key];
+      if (header.align === "right") {
+        drawTextRight(page, header.label, colX + width - 8, y - 16, bold, 10, text);
+      } else {
+        page.drawText(header.label, { x: colX + 8, y: y - 16, font: bold, size: 10, color: text });
+      }
+      colX += width;
     }
-    y -= 22;
+
+    drawTableFrameVerticals(y, headerHeight);
+    y -= headerHeight;
   };
 
+  ensureSpace(headerHeight + 30, true);
   drawTableHeader();
 
-  const lines = payload.lines.length
+  const invoiceLines = payload.lines.length
     ? payload.lines
-    : [{ line_no: 1, description: "No invoice lines available", quantity: 0, unit_price: 0, tax_amount: 0, line_total: 0 }];
+    : [
+        {
+          line_no: 1,
+          description: "No invoice lines available",
+          quantity: 0,
+          unit_price: 0,
+          tax_amount: 0,
+          line_total: 0,
+        },
+      ];
 
-  for (const line of lines) {
-    const descLines = wrapText(line.description || "-", font, 9, cols.desc - 8);
-    const rowHeight = Math.max(18, descLines.length * 11 + 6);
-    ensureSpace(rowHeight + 4);
-    if (y - 4 < MARGIN + 110) {
-      newPage();
+  for (let index = 0; index < invoiceLines.length; index += 1) {
+    const line = invoiceLines[index]!;
+    const descLines = wrapText(line.description || "-", font, 10, tableCols.desc - 14);
+    const rowHeight = Math.max(28, descLines.length * 12 + 10);
+
+    if (y - rowHeight < 130) {
+      newPage(true);
       drawTableHeader();
     }
 
@@ -478,98 +556,142 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
       y: y - rowHeight,
       width: tableWidth,
       height: rowHeight,
-      borderColor: border,
+      borderColor: rule,
       borderWidth: 1,
       color: rgb(1, 1, 1),
     });
 
-    let x = tableX + 6;
-    page.drawText(String(line.line_no ?? ""), {
-      x,
-      y: y - 12,
+    drawTableFrameVerticals(y, rowHeight);
+
+    let colX = tableX;
+    page.drawText(String(line.line_no ?? index + 1), {
+      x: colX + 8,
+      y: y - 18,
       font,
-      size: 9,
+      size: 10,
       color: text,
     });
-    x += cols.line - 12;
+    colX += tableCols.line;
 
-    let descY = y - 12;
+    let descY = y - 18;
     for (const dLine of descLines) {
-      page.drawText(dLine, { x, y: descY, font, size: 9, color: text });
-      descY -= 11;
+      page.drawText(dLine, { x: colX + 8, y: descY, font, size: 10, color: text });
+      descY -= 12;
     }
-    x += cols.desc;
+    colX += tableCols.desc;
 
-    page.drawText(numberFmt(line.quantity), { x, y: y - 12, font, size: 9, color: text });
-    x += cols.qty;
+    drawTextRight(page, numberFmt(line.quantity), colX + tableCols.qty - 8, y - 18, font, 10, text);
+    colX += tableCols.qty;
+    drawTextRight(page, currencyFmt(line.unit_price, currency), colX + tableCols.unit - 8, y - 18, font, 10, text);
+    colX += tableCols.unit;
+    drawTextRight(page, currencyFmt(line.tax_amount, currency), colX + tableCols.tax - 8, y - 18, font, 10, text);
+    colX += tableCols.tax;
+    drawTextRight(page, currencyFmt(line.line_total, currency), colX + tableCols.total - 8, y - 18, bold, 10, text);
 
-    page.drawText(currencyFmt(line.unit_price, currency), { x, y: y - 12, font, size: 9, color: text });
-    x += cols.unit;
-
-    page.drawText(currencyFmt(line.tax_amount, currency), { x, y: y - 12, font, size: 9, color: text });
-    x += cols.tax;
-
-    page.drawText(currencyFmt(line.line_total, currency), { x, y: y - 12, font, size: 9, color: text });
     y -= rowHeight;
   }
 
-  y -= 12;
+  y -= 16;
 
-  // Totals + notes
-  ensureSpace(150);
-  const totalsWidth = 210;
-  const totalsX = PAGE.width - MARGIN - totalsWidth;
-  page.drawRectangle({
-    x: totalsX,
-    y: y - 72,
-    width: totalsWidth,
-    height: 72,
-    borderColor: border,
-    borderWidth: 1,
-    color: rgb(1, 1, 1),
-  });
-  const totals = [
-    ["Subtotal", currencyFmt(payload.invoice.subtotal, currency)],
-    ["Tax", currencyFmt(payload.invoice.tax_total, currency)],
-    ["Total", currencyFmt(payload.invoice.total, currency)],
+  const totalsWidth = 170;
+  const totalsX = rightEdge - totalsWidth;
+  const totalsRows = [
+    { label: "Subtotal:", value: currencyFmt(payload.invoice.subtotal, currency), isTotal: false },
+    { label: "Tax:", value: currencyFmt(payload.invoice.tax_total, currency), isTotal: false },
+    { label: "Total:", value: currencyFmt(payload.invoice.total, currency), isTotal: true },
   ] as const;
-  let totalY = y - 16;
-  for (const [label, value] of totals) {
-    page.drawText(label, { x: totalsX + 10, y: totalY, font: label === "Total" ? bold : font, size: 10, color: text });
-    page.drawText(value, { x: totalsX + 95, y: totalY, font: label === "Total" ? bold : font, size: 10, color: text });
-    totalY -= 18;
+  const totalsHeight = 108;
+  const notesAreaWidth = totalsX - contentX - 18;
+
+  if (y - Math.max(totalsHeight, 90) < 90) {
+    newPage(false);
   }
 
-  const notesText = (payload.invoice.notes || "").trim();
-  if (notesText) {
-    const notesWidth = tableWidth - totalsWidth - 14;
-    page.drawRectangle({
-      x: tableX,
-      y: y - 72,
-      width: notesWidth,
-      height: 72,
-      borderColor: border,
-      borderWidth: 1,
-      color: rgb(1, 1, 1),
+  let totalsTop = y;
+  drawRule(page, totalsX, rightEdge, totalsTop, rule);
+
+  let totalsY = totalsTop - 20;
+  for (const row of totalsRows) {
+    const rowHeight = row.isTotal ? 34 : 24;
+    page.drawText(row.label, {
+      x: totalsX + 6,
+      y: totalsY,
+      font: row.isTotal ? bold : font,
+      size: row.isTotal ? 11.5 : 10.5,
+      color: text,
     });
-    page.drawText("Notes", { x: tableX + 10, y: y - 16, font: bold, size: 10, color: brand });
-    let noteY = y - 30;
-    for (const line of wrapText(notesText, font, 9, notesWidth - 20).slice(0, 4)) {
-      page.drawText(line, { x: tableX + 10, y: noteY, font, size: 9, color: text });
-      noteY -= 11;
-    }
+    drawTextRight(
+      page,
+      row.value,
+      rightEdge - 8,
+      totalsY,
+      row.isTotal ? bold : font,
+      row.isTotal ? 11.5 : 10.5,
+      text
+    );
+    drawRule(page, totalsX, rightEdge, totalsY - (row.isTotal ? 10 : 8), rule);
+    totalsY -= rowHeight;
   }
-  y -= 84;
 
-  // Summary / footer note
-  ensureSpace(50);
-  page.drawText(
-    "Thank you for your business. This invoice was generated by KudiDash.",
-    { x: MARGIN, y, font, size: 9, color: muted }
-  );
+  const paymentTerms = (payload.invoice.notes || "").trim() || "Due upon receipt.";
+  const paymentTermLines = wrapText(paymentTerms, font, 10.5, Math.max(120, notesAreaWidth - 94));
+  let leftInfoY = y - 6;
 
-  for (const p of pdf.getPages()) {
-    drawFooter(p);
+  if (notesAreaWidth > 150) {
+    page.drawText("Payment Terms:", {
+      x: contentX,
+      y: leftInfoY - 14,
+      font: bold,
+      size: 10.5,
+      color: text,
+    });
+    let textY = leftInfoY - 14;
+    const labelWidth = bold.widthOfTextAtSize("Payment Terms:", 10.5) + 6;
+    for (let i = 0; i < paymentTermLines.length; i += 1) {
+      page.drawText(paymentTermLines[i] || "", {
+        x: i === 0 ? contentX + labelWidth : contentX,
+        y: textY,
+        font,
+        size: 10.5,
+        color: text,
+      });
+      textY -= 13;
+    }
+    leftInfoY = Math.min(textY, totalsY + 24);
+  }
+
+  y = Math.min(leftInfoY, totalsY + 12) - 28;
+  if (y < 95) {
+    newPage(false);
+    y -= 6;
+  }
+
+  drawRule(page, contentX, rightEdge, y, rule);
+  y -= 36;
+
+  page.drawText("Thank you for your business.", {
+    x: contentX,
+    y,
+    font,
+    size: 11,
+    color: text,
+  });
+
+  y -= 16;
+  page.drawText("Generated by KudiDash", {
+    x: contentX,
+    y,
+    font,
+    size: 9,
+    color: muted,
+  });
+
+  const pages = pdf.getPages();
+  if (pages.length > 1) {
+    for (let i = 0; i < pages.length; i += 1) {
+      const p = pages[i]!;
+      drawTextRight(p, `Page ${i + 1} of ${pages.length}`, rightEdge, 24, font, 8, muted);
+    }
   }
 
   return pdf.save();
