@@ -1,4 +1,11 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+} from "pdf-lib";
 
 type InvoiceLineLike = {
   id?: string;
@@ -37,6 +44,13 @@ type OrganizationLike = {
   name?: string | null;
   slug?: string | null;
   base_currency?: string | null;
+  dashboard_logo_url?: string | null;
+  invoice_company_name?: string | null;
+  invoice_company_address?: string | null;
+  invoice_company_phone?: string | null;
+  invoice_company_email?: string | null;
+  invoice_company_tax_id?: string | null;
+  invoice_logo_url?: string | null;
 };
 
 export interface InvoicePdfPayload {
@@ -88,10 +102,74 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines;
 }
 
+function detectImageType(bytes: Uint8Array) {
+  const isPng =
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a;
+
+  if (isPng) return "png" as const;
+
+  const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (isJpeg) return "jpg" as const;
+
+  return null;
+}
+
+async function embedOptionalLogo(pdf: PDFDocument, logoRef?: string | null): Promise<PDFImage | null> {
+  const source = logoRef?.trim();
+  if (!source) return null;
+
+  try {
+    let bytes: Uint8Array;
+    let imageType: "png" | "jpg" | null = null;
+
+    if (/^data:/i.test(source)) {
+      const match = source.match(/^data:(image\/(?:png|jpe?g));base64,([\s\S]+)$/i);
+      if (!match) return null;
+      bytes = Buffer.from(match[2], "base64");
+      imageType = match[1].toLowerCase().includes("png") ? "png" : "jpg";
+    } else {
+      const response = await fetch(source);
+      if (!response.ok) return null;
+      bytes = new Uint8Array(await response.arrayBuffer());
+
+      const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      if (contentType.includes("png")) imageType = "png";
+      if (contentType.includes("jpeg") || contentType.includes("jpg")) imageType = "jpg";
+      imageType ||= detectImageType(bytes);
+    }
+
+    if (!imageType) return null;
+    return imageType === "png" ? pdf.embedPng(bytes) : pdf.embedJpg(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function pushMultiline(target: string[], value?: string | null) {
+  if (!value) return;
+  for (const part of String(value).split(/\r?\n/)) {
+    const trimmed = part.trim();
+    if (trimmed) target.push(trimmed);
+  }
+}
+
 export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const companyName = payload.org.invoice_company_name?.trim() || payload.org.name || "Organization";
+  const logoImage = await embedOptionalLogo(
+    pdf,
+    payload.org.invoice_logo_url || payload.org.dashboard_logo_url || null
+  );
 
   const brand = rgb(0.12, 0.27, 0.5);
   const text = rgb(0.12, 0.12, 0.12);
@@ -101,8 +179,6 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
 
   let page = pdf.addPage([PAGE.width, PAGE.height]);
   let y = PAGE.height - MARGIN;
-
-  const lineHeight = 15;
 
   const newPage = () => {
     page = pdf.addPage([PAGE.width, PAGE.height]);
@@ -139,14 +215,32 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
 
   const drawPageHeader = (isFirstPage: boolean) => {
     if (isFirstPage) {
+      let titleX = MARGIN;
+      if (logoImage) {
+        const scaled = logoImage.scale(1);
+        const maxWidth = 96;
+        const maxHeight = 42;
+        const scale = Math.min(maxWidth / scaled.width, maxHeight / scaled.height, 1);
+        const width = scaled.width * scale;
+        const height = scaled.height * scale;
+
+        page.drawImage(logoImage, {
+          x: MARGIN,
+          y: y - height + 8,
+          width,
+          height,
+        });
+        titleX += width + 12;
+      }
+
       page.drawText("INVOICE", {
-        x: MARGIN,
+        x: titleX,
         y,
         font: bold,
         size: 22,
         color: brand,
       });
-      page.drawText(payload.org.name || "Organization", {
+      page.drawText(companyName, {
         x: PAGE.width - MARGIN - 220,
         y: y + 2,
         font: bold,
@@ -162,7 +256,7 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
       });
       y -= 34;
     } else {
-      page.drawText(payload.org.name || "Organization", {
+      page.drawText(companyName, {
         x: MARGIN,
         y,
         font: bold,
@@ -237,22 +331,23 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   y -= 108;
 
   // Bill-to and issuer blocks
-  ensureSpace(140);
+  const partyBoxHeight = 154;
+  ensureSpace(partyBoxHeight + 22);
   const boxWidth = (PAGE.width - MARGIN * 2 - 12) / 2;
   page.drawRectangle({
     x: MARGIN,
-    y: y - 118,
+    y: y - partyBoxHeight,
     width: boxWidth,
-    height: 118,
+    height: partyBoxHeight,
     borderColor: border,
     borderWidth: 1,
     color: rgb(1, 1, 1),
   });
   page.drawRectangle({
     x: MARGIN + boxWidth + 12,
-    y: y - 118,
+    y: y - partyBoxHeight,
     width: boxWidth,
-    height: 118,
+    height: partyBoxHeight,
     borderColor: border,
     borderWidth: 1,
     color: rgb(1, 1, 1),
@@ -274,13 +369,12 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
 
   let leftY = y - 34;
   const customer = payload.customer ?? null;
-  for (const line of [
-    customer?.name || "Customer",
-    customer?.email || null,
-    customer?.phone || null,
-    customer?.billing_address || null,
-    customer?.tax_id ? `Tax ID: ${customer.tax_id}` : null,
-  ].filter(Boolean) as string[]) {
+  const customerLines: string[] = [customer?.name || "Customer"];
+  pushMultiline(customerLines, customer?.email || null);
+  pushMultiline(customerLines, customer?.phone || null);
+  pushMultiline(customerLines, customer?.billing_address || null);
+  pushMultiline(customerLines, customer?.tax_id ? `Tax ID: ${customer.tax_id}` : null);
+  for (const line of customerLines) {
     for (const wrapped of wrapText(line, font, 10, boxWidth - 24)) {
       page.drawText(wrapped, { x: MARGIN + 12, y: leftY, font, size: 10, color: text });
       leftY -= 12;
@@ -288,12 +382,28 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   }
 
   let rightY = y - 34;
-  for (const line of [
-    payload.org.name || "Organization",
-    payload.org.slug ? `Slug: ${payload.org.slug}` : null,
-    `Base Currency: ${payload.org.base_currency || payload.invoice.currency_code || "GHS"}`,
-    `Org Ref: ${payload.org.id}`,
-  ].filter(Boolean) as string[]) {
+  const issuerLines: string[] = [companyName];
+  pushMultiline(issuerLines, payload.org.invoice_company_address || null);
+  pushMultiline(
+    issuerLines,
+    payload.org.invoice_company_phone ? `Phone: ${payload.org.invoice_company_phone}` : null
+  );
+  pushMultiline(
+    issuerLines,
+    payload.org.invoice_company_email ? `Email: ${payload.org.invoice_company_email}` : null
+  );
+  pushMultiline(
+    issuerLines,
+    payload.org.invoice_company_tax_id ? `Tax ID: ${payload.org.invoice_company_tax_id}` : null
+  );
+  issuerLines.push(
+    `Base Currency: ${payload.org.base_currency || payload.invoice.currency_code || "GHS"}`
+  );
+  if (!payload.org.invoice_company_address && payload.org.slug) {
+    issuerLines.push(`Org: ${payload.org.slug}`);
+  }
+
+  for (const line of issuerLines) {
     for (const wrapped of wrapText(line, font, 10, boxWidth - 24)) {
       page.drawText(wrapped, {
         x: MARGIN + boxWidth + 24,
@@ -305,7 +415,7 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
       rightY -= 12;
     }
   }
-  y -= 132;
+  y -= partyBoxHeight + 14;
 
   // Lines table
   const currency = payload.invoice.currency_code || payload.org.base_currency || "GHS";

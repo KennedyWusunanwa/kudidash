@@ -49,6 +49,20 @@ export async function GET(
         slug: typeof org.slug === "string" ? org.slug : undefined,
         base_currency:
           typeof org.base_currency === "string" ? org.base_currency : undefined,
+        dashboard_logo_url:
+          typeof org.dashboard_logo_url === "string" ? org.dashboard_logo_url : undefined,
+        invoice_company_name:
+          typeof org.invoice_company_name === "string" ? org.invoice_company_name : undefined,
+        invoice_company_address:
+          typeof org.invoice_company_address === "string" ? org.invoice_company_address : undefined,
+        invoice_company_phone:
+          typeof org.invoice_company_phone === "string" ? org.invoice_company_phone : undefined,
+        invoice_company_email:
+          typeof org.invoice_company_email === "string" ? org.invoice_company_email : undefined,
+        invoice_company_tax_id:
+          typeof org.invoice_company_tax_id === "string" ? org.invoice_company_tax_id : undefined,
+        invoice_logo_url:
+          typeof org.invoice_logo_url === "string" ? org.invoice_logo_url : undefined,
       },
       customer: customer
         ? {
@@ -95,4 +109,3 @@ export async function GET(
     return NextResponse.json({ error: message }, { status: 404 });
   }
 }
-

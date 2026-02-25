@@ -10,6 +10,27 @@ import {
   revalidateOrgPaths,
 } from "@/lib/actions/_helpers";
 
+function isValidHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function isInvoiceLogoDataUrl(value: string) {
+  return /^data:image\/(?:png|jpe?g);base64,[a-z0-9+/=\s]+$/i.test(value);
+}
+
+const invoiceLogoSchema = z
+  .string()
+  .trim()
+  .max(1_000_000, "Logo image is too large")
+  .refine((value) => !value || isValidHttpUrl(value) || isInvoiceLogoDataUrl(value), {
+    message: "Use an HTTP(S) image URL or upload a PNG/JPG logo.",
+  });
+
 const orgSettingsSchema = z.object({
   orgId: z.string().uuid(),
   name: z.string().trim().min(2).max(120),
@@ -18,6 +39,12 @@ const orgSettingsSchema = z.object({
   dashboard_name: z.string().trim().min(2).max(120).optional().or(z.literal("")),
   dashboard_logo_url: z.string().url().optional().or(z.literal("")),
   dashboard_color_scheme: z.enum(DASHBOARD_COLOR_SCHEMES).default("default"),
+  invoice_company_name: z.string().trim().max(120).optional().or(z.literal("")),
+  invoice_company_address: z.string().trim().max(500).optional().or(z.literal("")),
+  invoice_company_phone: z.string().trim().max(60).optional().or(z.literal("")),
+  invoice_company_email: z.string().email().max(254).optional().or(z.literal("")),
+  invoice_company_tax_id: z.string().trim().max(120).optional().or(z.literal("")),
+  invoice_logo_url: invoiceLogoSchema.optional().or(z.literal("")),
 });
 
 const accountSettingsSchema = z.object({
@@ -52,6 +79,22 @@ export async function updateOrgSettingsAction(
           ? parsed.dashboard_logo_url.trim()
           : null,
         dashboard_color_scheme: parsed.dashboard_color_scheme,
+        invoice_company_name: parsed.invoice_company_name?.trim()
+          ? parsed.invoice_company_name.trim()
+          : null,
+        invoice_company_address: parsed.invoice_company_address?.trim()
+          ? parsed.invoice_company_address.trim()
+          : null,
+        invoice_company_phone: parsed.invoice_company_phone?.trim()
+          ? parsed.invoice_company_phone.trim()
+          : null,
+        invoice_company_email: parsed.invoice_company_email?.trim()
+          ? parsed.invoice_company_email.trim()
+          : null,
+        invoice_company_tax_id: parsed.invoice_company_tax_id?.trim()
+          ? parsed.invoice_company_tax_id.trim()
+          : null,
+        invoice_logo_url: parsed.invoice_logo_url?.trim() ? parsed.invoice_logo_url.trim() : null,
       })
       .eq("id", parsed.orgId);
     if (error) throw error;

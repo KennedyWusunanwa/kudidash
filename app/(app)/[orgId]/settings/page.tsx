@@ -52,6 +52,28 @@ export default async function SettingsPage({
                 typeof org?.dashboard_color_scheme === "string"
                   ? String(org.dashboard_color_scheme)
                   : "default",
+              invoice_company_name:
+                typeof org?.invoice_company_name === "string"
+                  ? String(org.invoice_company_name)
+                  : "",
+              invoice_company_address:
+                typeof org?.invoice_company_address === "string"
+                  ? String(org.invoice_company_address)
+                  : "",
+              invoice_company_phone:
+                typeof org?.invoice_company_phone === "string"
+                  ? String(org.invoice_company_phone)
+                  : "",
+              invoice_company_email:
+                typeof org?.invoice_company_email === "string"
+                  ? String(org.invoice_company_email)
+                  : "",
+              invoice_company_tax_id:
+                typeof org?.invoice_company_tax_id === "string"
+                  ? String(org.invoice_company_tax_id)
+                  : "",
+              invoice_logo_url:
+                typeof org?.invoice_logo_url === "string" ? String(org.invoice_logo_url) : "",
             }}
             accountSettings={
               (accountSettings as Record<string, string | null | undefined> | null) ?? undefined

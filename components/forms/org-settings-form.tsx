@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { type ChangeEvent, useState, useTransition } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/actions/settings.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,42 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+function isValidHttpUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function isInvoiceLogoDataUrl(value: string) {
+  return /^data:image\/(?:png|jpe?g);base64,[a-z0-9+/=\s]+$/i.test(value);
+}
+
+const invoiceLogoSchema = z
+  .string()
+  .trim()
+  .max(1_000_000, "Logo image is too large")
+  .refine((value) => !value || isValidHttpUrl(value) || isInvoiceLogoDataUrl(value), {
+    message: "Use an HTTP(S) image URL or upload a PNG/JPG logo.",
+  });
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Failed to read image file."));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read image file."));
+    reader.readAsDataURL(file);
+  });
+}
+
 const orgSettingsSchema = z.object({
   name: z.string().trim().min(2).max(120),
   base_currency: z.string().length(3),
@@ -36,6 +73,12 @@ const orgSettingsSchema = z.object({
   dashboard_name: z.string().trim().min(2).max(120).optional().or(z.literal("")),
   dashboard_logo_url: z.string().url().optional().or(z.literal("")),
   dashboard_color_scheme: z.enum(DASHBOARD_COLOR_SCHEMES),
+  invoice_company_name: z.string().trim().max(120).optional().or(z.literal("")),
+  invoice_company_address: z.string().trim().max(500).optional().or(z.literal("")),
+  invoice_company_phone: z.string().trim().max(60).optional().or(z.literal("")),
+  invoice_company_email: z.string().email().max(254).optional().or(z.literal("")),
+  invoice_company_tax_id: z.string().trim().max(120).optional().or(z.literal("")),
+  invoice_logo_url: invoiceLogoSchema.optional().or(z.literal("")),
 });
 
 const accountSettingsSchema = z.object({
@@ -67,6 +110,12 @@ export function OrgSettingsForm({
     dashboard_name?: string | null;
     dashboard_logo_url?: string | null;
     dashboard_color_scheme?: string | null;
+    invoice_company_name?: string | null;
+    invoice_company_address?: string | null;
+    invoice_company_phone?: string | null;
+    invoice_company_email?: string | null;
+    invoice_company_tax_id?: string | null;
+    invoice_logo_url?: string | null;
   };
   accountSettings?: Partial<Record<keyof AccountSettingsInput, string | null>>;
   accountOptions: Array<{ id: string; label: string }>;
@@ -74,6 +123,7 @@ export function OrgSettingsForm({
 }) {
   const [isPendingOrg, startOrgTransition] = useTransition();
   const [isPendingMap, startMapTransition] = useTransition();
+  const [isReadingLogoFile, setIsReadingLogoFile] = useState(false);
 
   const orgForm = useForm<OrgSettingsInput>({
     resolver: zodResolver(orgSettingsSchema),
@@ -87,6 +137,12 @@ export function OrgSettingsForm({
         (DASHBOARD_COLOR_SCHEMES as readonly string[]).includes(org.dashboard_color_scheme ?? "")
           ? ((org.dashboard_color_scheme ?? "default") as any)
           : "default",
+      invoice_company_name: org.invoice_company_name ?? "",
+      invoice_company_address: org.invoice_company_address ?? "",
+      invoice_company_phone: org.invoice_company_phone ?? "",
+      invoice_company_email: org.invoice_company_email ?? "",
+      invoice_company_tax_id: org.invoice_company_tax_id ?? "",
+      invoice_logo_url: org.invoice_logo_url ?? "",
     },
   });
 
@@ -146,6 +202,41 @@ export function OrgSettingsForm({
     { name: "revenue_default_account_id", label: "Default Revenue account" },
     { name: "expense_default_account_id", label: "Default Expense account" },
   ];
+
+  const invoiceLogoValue = orgForm.watch("invoice_logo_url");
+
+  const handleInvoiceLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/png", "image/jpeg", "image/jpg"].includes(file.type)) {
+      toast.error("Use a PNG or JPG file for invoice logo upload.");
+      event.currentTarget.value = "";
+      return;
+    }
+
+    if (file.size > 500 * 1024) {
+      toast.error("Invoice logo must be 500 KB or smaller.");
+      event.currentTarget.value = "";
+      return;
+    }
+
+    setIsReadingLogoFile(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      orgForm.setValue("invoice_logo_url", dataUrl as any, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      toast.success("Invoice logo uploaded. Save settings to apply it.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to read logo file.");
+    } finally {
+      setIsReadingLogoFile(false);
+      event.currentTarget.value = "";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -234,6 +325,174 @@ export function OrgSettingsForm({
               </FormItem>
             )}
           />
+          <div className="md:col-span-2 rounded-md border p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Invoice company details</p>
+              <p className="text-xs text-muted-foreground">
+                These details appear on downloaded invoice PDFs in the `From` section.
+              </p>
+            </div>
+          </div>
+          <FormField
+            control={orgForm.control}
+            name="invoice_company_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company name on invoice</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Acme Ltd"
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Optional. Defaults to organization name if blank.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="invoice_company_tax_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company Tax ID</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="TIN / VAT ID"
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="invoice_company_email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company email</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="billing@company.com"
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="invoice_company_phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company phone</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="+233..."
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="invoice_company_address"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Company address</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder={"Street address\nCity, Country"}
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={orgForm.control}
+            name="invoice_logo_url"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Invoice logo (URL or upload)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="https://yourcdn.com/company-logo.png"
+                    {...(field as any)}
+                    value={field.value ?? ""}
+                    disabled={!canManageOrgSettings || isPendingOrg}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Use a public image URL, or upload a PNG/JPG file below (stored directly in
+                  settings).
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-sm font-medium" htmlFor="invoice-logo-upload">
+              Upload invoice logo (PNG/JPG, max 500 KB)
+            </label>
+            <Input
+              id="invoice-logo-upload"
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={handleInvoiceLogoUpload}
+              disabled={!canManageOrgSettings || isPendingOrg || isReadingLogoFile}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              {invoiceLogoValue ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={invoiceLogoValue}
+                  alt="Invoice logo preview"
+                  className="h-12 w-auto max-w-40 rounded border bg-white object-contain p-1"
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">No invoice logo selected.</p>
+              )}
+              {invoiceLogoValue ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    orgForm.setValue("invoice_logo_url", "" as any, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={!canManageOrgSettings || isPendingOrg}
+                >
+                  Clear invoice logo
+                </Button>
+              ) : null}
+              {isReadingLogoFile ? (
+                <p className="text-xs text-muted-foreground">Reading logo file...</p>
+              ) : null}
+            </div>
+          </div>
           <FormField
             control={orgForm.control}
             name="base_currency"
@@ -283,7 +542,7 @@ export function OrgSettingsForm({
           />
           <div className="md:col-span-2">
             {canManageOrgSettings ? (
-              <Button type="submit" disabled={isPendingOrg}>
+              <Button type="submit" disabled={isPendingOrg || isReadingLogoFile}>
                 {isPendingOrg ? "Saving..." : "Save organization settings"}
               </Button>
             ) : (
