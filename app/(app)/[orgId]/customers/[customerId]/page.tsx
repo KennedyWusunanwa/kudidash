@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, PlusCircle } from "lucide-react";
 import { getCustomerProfile } from "@/lib/data/customers.data";
+import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
+import { roleHasPermission } from "@/lib/permissions";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { CustomerDeleteButton } from "@/components/forms/customer-delete-button";
+import { CustomerProfileForm } from "@/components/forms/customer-profile-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,10 +33,20 @@ export default async function CustomerProfilePage({
   params: Promise<{ orgId: string; customerId: string }>;
 }) {
   const { orgId, customerId } = await params;
-  const profile = await getCustomerProfile(orgId, customerId);
+  const [profile, membership, org] = await Promise.all([
+    getCustomerProfile(orgId, customerId),
+    requireOrgMembership(orgId),
+    getOrganizationById(orgId),
+  ]);
   if (!profile) notFound();
 
   const { customer, invoices, receipts, activities } = profile;
+  const canManageCustomer = roleHasPermission(membership.role, "org.manage");
+  const canDeleteCustomer = customer.invoice_count === 0 && customer.receipt_count === 0;
+  const baseCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -65,54 +79,107 @@ export default async function CustomerProfilePage({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_1.9fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Badge variant={statusBadgeVariant(customer.is_active ? "active" : "inactive")}>
-                {customer.is_active ? "Active" : "Inactive"}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Customer ID: {customer.id.slice(0, 8)}
-              </span>
-            </div>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant={statusBadgeVariant(customer.is_active ? "active" : "inactive")}>
+                  {customer.is_active ? "Active" : "Inactive"}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  Customer ID: {customer.id.slice(0, 8)}
+                </span>
+              </div>
 
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="font-medium">{customer.email || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Phone</p>
-                <p className="font-medium">{customer.phone || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Billing address</p>
-                <p className="whitespace-pre-line font-medium">{customer.billing_address || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Tax ID</p>
-                <p className="font-medium">{customer.tax_id || "-"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Description</p>
-                <p className="whitespace-pre-line font-medium">{customer.description || "-"}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="space-y-3 text-sm">
                 <div>
-                  <p className="text-xs text-muted-foreground">Created</p>
-                  <p className="font-medium">{formatDate(customer.created_at)}</p>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="font-medium">{customer.email || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Updated</p>
-                  <p className="font-medium">{formatDate(customer.updated_at)}</p>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="font-medium">{customer.phone || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Billing address</p>
+                  <p className="whitespace-pre-line font-medium">{customer.billing_address || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Tax ID</p>
+                  <p className="font-medium">{customer.tax_id || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Description</p>
+                  <p className="whitespace-pre-line font-medium">{customer.description || "-"}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Created</p>
+                    <p className="font-medium">{formatDate(customer.created_at)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Updated</p>
+                    <p className="font-medium">{formatDate(customer.updated_at)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Edit profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {canManageCustomer ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Admin/owner can update customer details directly from this profile.
+                  </p>
+                  <CustomerProfileForm
+                    orgId={orgId}
+                    customerId={customer.id}
+                    initialValues={{
+                      name: customer.name,
+                      email: customer.email,
+                      phone: customer.phone,
+                      billing_address: customer.billing_address,
+                      tax_id: customer.tax_id,
+                      description: customer.description,
+                      is_active: customer.is_active,
+                    }}
+                  />
+                  <div className="rounded-lg border border-dashed p-3">
+                    <p className="text-sm font-medium">Delete customer</p>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Customers with invoices or receipts cannot be deleted. Set them inactive
+                      instead.
+                    </p>
+                    <CustomerDeleteButton
+                      orgId={orgId}
+                      customerId={customer.id}
+                      customerName={customer.name}
+                      disabled={!canDeleteCustomer}
+                    />
+                    {!canDeleteCustomer ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Deletion is blocked because this customer has {customer.invoice_count} invoice(s)
+                        and {customer.receipt_count} receipt(s).
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Only organization `owner` and `admin` roles can edit customer information.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
@@ -129,7 +196,9 @@ export default async function CustomerProfilePage({
               <CardTitle className="text-sm">Invoiced Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-semibold">{formatCurrency(customer.invoice_total)}</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(customer.invoice_total, baseCurrency)}
+              </p>
               <p className="text-xs text-muted-foreground">Sum of invoice totals</p>
             </CardContent>
           </Card>
@@ -138,7 +207,9 @@ export default async function CustomerProfilePage({
               <CardTitle className="text-sm">Receipts Total</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-semibold">{formatCurrency(customer.receipt_total)}</p>
+              <p className="text-2xl font-semibold">
+                {formatCurrency(customer.receipt_total, baseCurrency)}
+              </p>
               <p className="text-xs text-muted-foreground">{customer.receipt_count} receipts</p>
             </CardContent>
           </Card>
@@ -148,7 +219,7 @@ export default async function CustomerProfilePage({
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-semibold">
-                {formatCurrency(customer.outstanding_balance)}
+                {formatCurrency(customer.outstanding_balance, baseCurrency)}
               </p>
               <p className="text-xs text-muted-foreground">
                 Invoice total minus receipts
@@ -292,7 +363,7 @@ export default async function CustomerProfilePage({
                   <div className="flex shrink-0 items-center gap-2">
                     {activity.amount != null ? (
                       <span className="text-sm font-medium">
-                        {formatCurrency(activity.amount, activity.currency_code || "GHS")}
+                        {formatCurrency(activity.amount, activity.currency_code || baseCurrency || "GHS")}
                       </span>
                     ) : null}
                     {activity.href ? (

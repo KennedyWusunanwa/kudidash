@@ -6,6 +6,7 @@ import {
   summarizeCustomerTransactionRows,
   getTrialBalance,
 } from "@/lib/data/reports.data";
+import { getOrganizationById } from "@/lib/data/org.data";
 import { ReportsSummaryChart } from "@/components/charts/reports-summary-chart";
 import { ExportCsvButton } from "@/components/tables/export-csv-button";
 import { ReportTable } from "@/components/tables/report-table";
@@ -22,12 +23,17 @@ export default async function ReportsPage({
   const startDate = formatISO(startOfMonth(now), { representation: "date" });
   const endDate = formatISO(endOfMonth(now), { representation: "date" });
 
-  const [trialBalance, pnl, balanceSheet, customerTransactions] = await Promise.all([
+  const [trialBalance, pnl, balanceSheet, customerTransactions, org] = await Promise.all([
     getTrialBalance(orgId, endDate),
     getProfitAndLoss(orgId, startDate, endDate),
     getBalanceSheet(orgId, endDate),
     getCustomerTransactionRows(orgId, startDate, endDate),
+    getOrganizationById(orgId),
   ]);
+  const baseCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
   const customerTransactionSummary = summarizeCustomerTransactionRows(
     customerTransactions as Array<Record<string, string | number | null | undefined>>
   );
@@ -67,7 +73,7 @@ export default async function ReportsPage({
           <CardTitle className="text-base">Period snapshot</CardTitle>
         </CardHeader>
         <CardContent>
-          <ReportsSummaryChart data={summaryChartData} />
+          <ReportsSummaryChart data={summaryChartData} currencyCode={baseCurrency} />
         </CardContent>
       </Card>
 
@@ -85,6 +91,7 @@ export default async function ReportsPage({
           </div>
           <ReportTable
             rows={trialBalance as never[]}
+            currencyCode={baseCurrency}
             columns={[
               { key: "account_code", label: "Code" },
               { key: "account_name", label: "Account" },
@@ -102,6 +109,7 @@ export default async function ReportsPage({
           </div>
           <ReportTable
             rows={pnl as never[]}
+            currencyCode={baseCurrency}
             columns={[
               { key: "category", label: "Category" },
               { key: "account_code", label: "Code" },
@@ -117,6 +125,7 @@ export default async function ReportsPage({
           </div>
           <ReportTable
             rows={balanceSheet as never[]}
+            currencyCode={baseCurrency}
             columns={[
               { key: "category", label: "Category" },
               { key: "account_code", label: "Code" },
@@ -144,6 +153,7 @@ export default async function ReportsPage({
           </div>
           <ReportTable
             rows={customerTransactionSummary as never[]}
+            currencyCode={baseCurrency}
             columns={[
               { key: "customer_name", label: "Customer" },
               { key: "invoice_count", label: "Invoices" },

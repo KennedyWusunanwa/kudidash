@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { getInvoice } from "@/lib/data/invoices.data";
+import { requireOrgMembership } from "@/lib/data/org.data";
+import { roleHasPermission } from "@/lib/permissions";
 import { InvoicesTable } from "@/components/tables/invoices-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,6 +20,8 @@ export default async function InvoiceDetailPage({
   params: Promise<{ orgId: string; invoiceId: string }>;
 }) {
   const { orgId, invoiceId } = await params;
+  const membership = await requireOrgMembership(orgId);
+  const canManageInvoiceAdmin = roleHasPermission(membership.role, "org.manage");
   let invoice: Record<string, unknown>;
   try {
     invoice = (await getInvoice(orgId, invoiceId)) as Record<string, unknown>;
@@ -88,6 +92,7 @@ export default async function InvoiceDetailPage({
         <CardContent>
           <InvoicesTable
             orgId={orgId}
+            canManageAdmin={canManageInvoiceAdmin}
             invoices={[
               {
                 id: String(invoice.id),

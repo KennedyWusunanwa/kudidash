@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import { listBills, listVendors } from "@/lib/data/bills.data";
+import { getOrganizationById } from "@/lib/data/org.data";
 import { VendorForm } from "@/components/forms/vendor-form";
 import { BillsTable } from "@/components/tables/bills-table";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,15 @@ export default async function BillsPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [bills, vendors] = await Promise.all([listBills(orgId), listVendors(orgId)]);
+  const [bills, vendors, org] = await Promise.all([
+    listBills(orgId),
+    listVendors(orgId),
+    getOrganizationById(orgId),
+  ]);
+  const baseCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -56,7 +65,7 @@ export default async function BillsPage({
           <CardTitle className="text-base">Bill register</CardTitle>
         </CardHeader>
         <CardContent>
-          <BillsTable orgId={orgId} bills={bills as never[]} />
+          <BillsTable orgId={orgId} bills={bills as never[]} currencyCode={baseCurrency} />
         </CardContent>
       </Card>
     </div>

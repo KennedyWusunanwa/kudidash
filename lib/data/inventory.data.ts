@@ -51,3 +51,23 @@ export async function listInventoryItems(orgId: string) {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function getInventoryItem(orgId: string, itemId: string) {
+  if (isDemoMode()) {
+    return (
+      demoInventoryItems.find((row) => row.id === itemId) ??
+      ({ ...demoInventoryItems[0], id: itemId, org_id: orgId, sku: "ITEM-EDIT", name: "Demo Item" } as any)
+    );
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("inventory_items")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("id", itemId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}

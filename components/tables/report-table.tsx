@@ -11,9 +11,11 @@ import { formatCurrency } from "@/lib/format";
 export function ReportTable({
   rows,
   columns,
+  currencyCode,
 }: {
   rows: Array<Record<string, unknown>>;
   columns: Array<{ key: string; label: string; type?: "text" | "currency" }>;
+  currencyCode?: string | null;
 }) {
   return (
     <div className="rounded-lg border">
@@ -34,7 +36,7 @@ export function ReportTable({
                   return (
                     <TableCell key={column.key}>
                       {column.type === "currency"
-                        ? formatCurrency(Number(value ?? 0))
+                        ? formatCurrency(Number(value ?? 0), currencyCode || undefined)
                         : String(value ?? "")}
                     </TableCell>
                   );

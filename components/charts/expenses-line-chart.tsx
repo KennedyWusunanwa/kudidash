@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCurrency } from "@/lib/format";
 import {
   CartesianGrid,
   Line,
@@ -12,8 +13,10 @@ import {
 
 export function ExpensesLineChart({
   data,
+  currencyCode,
 }: {
   data: Array<{ period: string; expenses: number }>;
+  currencyCode?: string | null;
 }) {
   return (
     <div className="h-64 w-full min-w-0">
@@ -21,8 +24,14 @@ export function ExpensesLineChart({
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
           <XAxis dataKey="period" tickLine={false} axisLine={false} />
-          <YAxis tickLine={false} axisLine={false} />
-          <Tooltip />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value) => formatCurrency(Number(value ?? 0), currencyCode || undefined)}
+          />
+          <Tooltip
+            formatter={(value) => formatCurrency(Number(value ?? 0), currencyCode || undefined)}
+          />
           <Line
             type="monotone"
             dataKey="expenses"

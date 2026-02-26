@@ -28,6 +28,10 @@ export default async function BillDetailPage({
   const lines = Array.isArray(bill.bill_lines)
     ? (bill.bill_lines as Array<Record<string, unknown>>)
     : [];
+  const billCurrency =
+    typeof bill.currency_code === "string" && bill.currency_code.trim()
+      ? bill.currency_code.trim().toUpperCase()
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -53,16 +57,20 @@ export default async function BillDetailPage({
             <p className="font-medium capitalize">{String(bill.status ?? "-")}</p>
           </div>
           <div>
+            <p className="text-xs text-muted-foreground">Currency</p>
+            <p className="font-medium">{billCurrency ?? "-"}</p>
+          </div>
+          <div>
             <p className="text-xs text-muted-foreground">Subtotal</p>
-            <p className="font-medium">{formatCurrency(Number(bill.subtotal ?? 0))}</p>
+            <p className="font-medium">{formatCurrency(Number(bill.subtotal ?? 0), billCurrency)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Tax</p>
-            <p className="font-medium">{formatCurrency(Number(bill.tax_total ?? 0))}</p>
+            <p className="font-medium">{formatCurrency(Number(bill.tax_total ?? 0), billCurrency)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="font-medium">{formatCurrency(Number(bill.total ?? 0))}</p>
+            <p className="font-medium">{formatCurrency(Number(bill.total ?? 0), billCurrency)}</p>
           </div>
         </CardContent>
       </Card>
@@ -81,9 +89,11 @@ export default async function BillDetailPage({
                 bill_date: String(bill.bill_date ?? ""),
                 due_date: String(bill.due_date ?? ""),
                 status: String(bill.status ?? "draft"),
+                currency_code: billCurrency ?? null,
                 total: Number(bill.total ?? 0),
               },
             ]}
+            currencyCode={billCurrency}
           />
         </CardContent>
       </Card>
@@ -112,9 +122,9 @@ export default async function BillDetailPage({
                       <TableCell>{String(line.line_no ?? "")}</TableCell>
                       <TableCell>{String(line.description ?? "-")}</TableCell>
                       <TableCell>{formatNumber(Number(line.quantity ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(line.unit_cost ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(line.tax_amount ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(line.line_total ?? 0))}</TableCell>
+                      <TableCell>{formatCurrency(Number(line.unit_cost ?? 0), billCurrency)}</TableCell>
+                      <TableCell>{formatCurrency(Number(line.tax_amount ?? 0), billCurrency)}</TableCell>
+                      <TableCell>{formatCurrency(Number(line.line_total ?? 0), billCurrency)}</TableCell>
                     </TableRow>
                   ))
                 ) : (

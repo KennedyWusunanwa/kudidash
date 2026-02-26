@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { startTransition } from "react";
-import { Download, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Download, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { postInvoiceAction } from "@/lib/actions/invoices.actions";
+import { deleteInvoiceAction, postInvoiceAction } from "@/lib/actions/invoices.actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,31 @@ type InvoiceRow = {
   total: number;
 };
 
-export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: InvoiceRow[] }) {
+export function InvoicesTable({
+  orgId,
+  invoices,
+  canManageAdmin = false,
+}: {
+  orgId: string;
+  invoices: InvoiceRow[];
+  canManageAdmin?: boolean;
+}) {
+  const router = useRouter();
+
+  const deleteInvoice = (invoice: InvoiceRow) => {
+    const label = invoice.invoice_no ?? invoice.id.slice(0, 8);
+    if (!window.confirm(`Delete invoice ${label}? This cannot be undone.`)) return;
+    startTransition(async () => {
+      const result = await deleteInvoiceAction({ orgId, invoiceId: invoice.id });
+      if (!result.success) {
+        toast.error(result.error || "Failed to delete invoice.");
+        return;
+      }
+      toast.success("Invoice deleted.");
+      router.refresh();
+    });
+  };
+
   return (
     <div className="rounded-lg border">
       <Table>
@@ -44,8 +69,11 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
         </TableHeader>
         <TableBody>
           {invoices.length ? (
-            invoices.map((invoice) => (
-              <TableRow key={invoice.id}>
+            invoices.map((invoice) => {
+              const canModifyDraft =
+                invoice.status === "draft" || invoice.status === "approved";
+              return (
+                <TableRow key={invoice.id}>
                 <TableCell className="font-medium">
                   <Link href={`/${orgId}/invoices/${invoice.id}`} className="hover:underline">
                     {invoice.invoice_no ?? invoice.id.slice(0, 8)}
@@ -62,6 +90,14 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
                 <TableCell>{formatCurrency(invoice.total, invoice.currency_code || undefined)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-wrap justify-end gap-2">
+                    {canManageAdmin && canModifyDraft ? (
+                      <Button asChild type="button" size="sm" variant="outline">
+                        <Link href={`/${orgId}/invoices/${invoice.id}/edit`}>
+                          <Pencil className="size-4" />
+                          Edit
+                        </Link>
+                      </Button>
+                    ) : null}
                     <Button asChild type="button" size="sm" variant="outline">
                       <a href={`/${orgId}/invoices/${invoice.id}/pdf`}>
                         <Download className="size-4" />
@@ -69,7 +105,7 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
                       </a>
                     </Button>
 
-                    {invoice.status === "draft" || invoice.status === "approved" ? (
+                    {canModifyDraft ? (
                       <Button
                         type="button"
                         size="sm"
@@ -88,10 +124,22 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
                         Post
                       </Button>
                     ) : null}
+                    {canManageAdmin && canModifyDraft ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteInvoice(invoice)}
+                      >
+                        <Trash2 className="size-4" />
+                        Delete
+                      </Button>
+                    ) : null}
                   </div>
                 </TableCell>
-              </TableRow>
-            ))
+                </TableRow>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">

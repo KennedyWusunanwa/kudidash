@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +8,7 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { createDraftInvoiceAction } from "@/lib/actions/invoices.actions";
+import { createDraftInvoiceAction, updateDraftInvoiceAction } from "@/lib/actions/invoices.actions";
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { formatCurrency } from "@/lib/format";
 import { invoiceSchema } from "@/lib/validators/invoice";
@@ -55,18 +56,43 @@ interface InventoryItemOption {
   salePrice?: number | null;
 }
 
+interface InvoiceFormInitialValues {
+  customer_id?: string;
+  customer_name?: string | null;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  customer_billing_address?: string | null;
+  customer_description?: string | null;
+  invoice_date?: string | null;
+  due_date?: string | null;
+  notes?: string | null;
+  lines?: Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    revenue_account_id: string;
+    tax_amount?: number | null;
+  }>;
+}
+
 export function InvoiceForm({
   orgId,
   defaultCurrencyCode,
   customers,
   revenueAccounts,
   inventoryItems = [],
+  mode = "create",
+  invoiceId,
+  initialValues,
 }: {
   orgId: string;
   defaultCurrencyCode?: string | null;
   customers: CustomerOption[];
   revenueAccounts: Option[];
   inventoryItems?: InventoryItemOption[];
+  mode?: "create" | "edit";
+  invoiceId?: string;
+  initialValues?: InvoiceFormInitialValues;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -75,25 +101,35 @@ export function InvoiceForm({
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
-      customer_id: customers[0]?.id ?? "__new__",
-      customer_name: customers[0]?.name ?? customers[0]?.label ?? "",
-      customer_email: customers[0]?.email ?? "",
-      customer_phone: customers[0]?.phone ?? "",
-      customer_billing_address: customers[0]?.billing_address ?? "",
-      customer_description: customers[0]?.description ?? "",
-      invoice_date: today,
-      due_date: today,
+      customer_id: initialValues?.customer_id ?? customers[0]?.id ?? "",
+      customer_name: initialValues?.customer_name ?? customers[0]?.name ?? customers[0]?.label ?? "",
+      customer_email: initialValues?.customer_email ?? customers[0]?.email ?? "",
+      customer_phone: initialValues?.customer_phone ?? customers[0]?.phone ?? "",
+      customer_billing_address:
+        initialValues?.customer_billing_address ?? customers[0]?.billing_address ?? "",
+      customer_description: initialValues?.customer_description ?? customers[0]?.description ?? "",
+      invoice_date: initialValues?.invoice_date ?? today,
+      due_date: initialValues?.due_date ?? today,
       currency_code: lockedCurrencyCode,
-      notes: "",
-      lines: [
-        {
-          description: "",
-          quantity: 1,
-          unit_price: 0,
-          revenue_account_id: revenueAccounts[0]?.id ?? "",
-          tax_amount: 0,
-        },
-      ],
+      notes: initialValues?.notes ?? "",
+      lines:
+        initialValues?.lines?.length
+          ? initialValues.lines.map((line) => ({
+              description: line.description ?? "",
+              quantity: Number(line.quantity ?? 1),
+              unit_price: Number(line.unit_price ?? 0),
+              revenue_account_id: line.revenue_account_id ?? (revenueAccounts[0]?.id ?? ""),
+              tax_amount: Number(line.tax_amount ?? 0),
+            }))
+          : [
+              {
+                description: "",
+                quantity: 1,
+                unit_price: 0,
+                revenue_account_id: revenueAccounts[0]?.id ?? "",
+                tax_amount: 0,
+              },
+            ],
     },
   });
 
@@ -120,15 +156,6 @@ export function InvoiceForm({
   }, [form, lockedCurrencyCode]);
 
   useEffect(() => {
-    if (selectedCustomerId === "__new__") {
-      form.setValue("customer_name", "", { shouldDirty: false, shouldValidate: true });
-      form.setValue("customer_email", "", { shouldDirty: false, shouldValidate: true });
-      form.setValue("customer_phone", "", { shouldDirty: false, shouldValidate: true });
-      form.setValue("customer_billing_address", "", { shouldDirty: false, shouldValidate: true });
-      form.setValue("customer_description", "", { shouldDirty: false, shouldValidate: true });
-      return;
-    }
-
     const customer = customersById.get(selectedCustomerId ?? "");
     if (!customer) return;
     form.setValue("customer_name", customer.name ?? customer.label ?? "", {
@@ -162,6 +189,22 @@ export function InvoiceForm({
   const onSubmit = (values: unknown) => {
     startTransition(async () => {
       const parsed = invoiceSchema.parse(values);
+      if (mode === "edit") {
+        const result = await updateDraftInvoiceAction({
+          orgId,
+          invoiceId: String(invoiceId || ""),
+          ...parsed,
+        });
+        if (!result.success) {
+          toast.error(result.error || "Failed to update invoice.");
+          return;
+        }
+        toast.success("Invoice updated.");
+        router.push(`/${orgId}/invoices/${invoiceId}`);
+        router.refresh();
+        return;
+      }
+
       const result = await createDraftInvoiceAction({ orgId, ...parsed });
       if (!result.success || !result.data) {
         toast.error(result.error || "Failed to create invoice.");
@@ -176,7 +219,7 @@ export function InvoiceForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Invoice</CardTitle>
+        <CardTitle>{mode === "edit" ? "Edit Invoice" : "New Invoice"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -191,11 +234,10 @@ export function InvoiceForm({
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select or create customer" />
+                          <SelectValue placeholder="Select customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__new__">Add new customer</SelectItem>
                         {customers.map((customer) => (
                           <SelectItem key={customer.id} value={customer.id}>
                             {customer.label}
@@ -203,6 +245,13 @@ export function InvoiceForm({
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Manage customers on the{" "}
+                      <Link href={`/${orgId}/customers`} className="underline underline-offset-2">
+                        Customers page
+                      </Link>
+                      .
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -515,8 +564,14 @@ export function InvoiceForm({
               </div>
             </div>
 
-            <Button type="submit" disabled={isPending || !revenueAccounts.length}>
-              {isPending ? "Creating..." : "Create draft invoice"}
+            <Button type="submit" disabled={isPending || !revenueAccounts.length || !customers.length}>
+              {isPending
+                ? mode === "edit"
+                  ? "Saving..."
+                  : "Creating..."
+                : mode === "edit"
+                  ? "Save invoice changes"
+                  : "Create draft invoice"}
             </Button>
           </form>
         </Form>

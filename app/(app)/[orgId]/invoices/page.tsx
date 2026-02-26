@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
-import { listCustomers, listInvoices } from "@/lib/data/invoices.data";
+import { listInvoices } from "@/lib/data/invoices.data";
+import { requireOrgMembership } from "@/lib/data/org.data";
+import { roleHasPermission } from "@/lib/permissions";
 import { InvoicesTable } from "@/components/tables/invoices-table";
-import { CustomerForm } from "@/components/forms/customer-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -12,7 +13,8 @@ export default async function InvoicesPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [invoices, customers] = await Promise.all([listInvoices(orgId), listCustomers(orgId)]);
+  const [invoices, membership] = await Promise.all([listInvoices(orgId), requireOrgMembership(orgId)]);
+  const canManageInvoiceAdmin = roleHasPermission(membership.role, "org.manage");
 
   return (
     <div className="space-y-6">
@@ -35,23 +37,13 @@ export default async function InvoicesPage({
         <CardHeader>
           <CardTitle className="text-base">Customers</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <CustomerForm orgId={orgId} />
-          <div className="flex flex-wrap gap-2">
-            {customers.length ? (
-              customers.map((customer) => (
-                <Link
-                  key={customer.id}
-                  href={`/${orgId}/customers/${String(customer.id)}`}
-                  className="rounded-full border px-3 py-1 text-sm hover:bg-accent"
-                >
-                  {String(customer.name)}
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No customers yet.</p>
-            )}
-          </div>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Customer creation and profiles are managed from the Customers page.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/${orgId}/customers`}>Open customers</Link>
+          </Button>
         </CardContent>
       </Card>
 
@@ -60,7 +52,7 @@ export default async function InvoicesPage({
           <CardTitle className="text-base">Invoice register</CardTitle>
         </CardHeader>
         <CardContent>
-          <InvoicesTable orgId={orgId} invoices={invoices as never[]} />
+          <InvoicesTable orgId={orgId} invoices={invoices as never[]} canManageAdmin={canManageInvoiceAdmin} />
         </CardContent>
       </Card>
     </div>

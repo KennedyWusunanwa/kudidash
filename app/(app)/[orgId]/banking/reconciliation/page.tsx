@@ -4,6 +4,7 @@ import {
   listBankTransactions,
   listReconciliationSessions,
 } from "@/lib/data/banking.data";
+import { getOrganizationById } from "@/lib/data/org.data";
 import { BankAccountForm } from "@/components/forms/bank-account-form";
 import { BankCsvImportForm } from "@/components/forms/bank-csv-import-form";
 import { ReconciliationSessionForm } from "@/components/forms/reconciliation-session-form";
@@ -17,12 +18,20 @@ export default async function BankingReconciliationPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [accounts, bankAccounts, transactions, sessions] = await Promise.all([
+  const [accounts, bankAccounts, transactions, sessions, org] = await Promise.all([
     listAccountsForSelect(orgId),
     listBankAccounts(orgId),
     listBankTransactions(orgId),
     listReconciliationSessions(orgId),
+    getOrganizationById(orgId),
   ]);
+  const baseCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
+  const bankAccountsById = new Map(
+    (bankAccounts as Array<Record<string, unknown>>).map((account) => [String(account.id), account])
+  );
 
   const latestOpenSession = (sessions as Array<Record<string, unknown>>).find(
     (s) => String(s.status) === "open"
@@ -116,7 +125,12 @@ export default async function BankingReconciliationPage({
                       </div>
                     </div>
                     <div className="text-sm font-medium">
-                      {formatCurrency(Number(session.statement_ending_balance ?? 0))}
+                      {formatCurrency(
+                        Number(session.statement_ending_balance ?? 0),
+                        (bankAccountsById.get(String(session.bank_account_id ?? ""))?.currency_code as
+                          | string
+                          | undefined) || baseCurrency
+                      )}
                     </div>
                   </div>
                 </div>
@@ -136,6 +150,7 @@ export default async function BankingReconciliationPage({
           <BankTransactionsTable
             orgId={orgId}
             transactions={transactions as never[]}
+            currencyCode={baseCurrency}
             reconciliationSessionId={
               latestOpenSession ? String(latestOpenSession.id) : undefined
             }

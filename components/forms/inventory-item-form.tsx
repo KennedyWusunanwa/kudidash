@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { createInventoryItemAction } from "@/lib/actions/inventory.actions";
+import {
+  createInventoryItemAction,
+  updateInventoryItemAction,
+} from "@/lib/actions/inventory.actions";
 import { inventoryItemSchema } from "@/lib/validators/inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,9 +38,25 @@ const NONE = "__none__";
 export function InventoryItemForm({
   orgId,
   accountOptions,
+  mode = "create",
+  itemId,
+  initialValues,
 }: {
   orgId: string;
   accountOptions: AccountOption[];
+  mode?: "create" | "edit";
+  itemId?: string;
+  initialValues?: Partial<{
+    sku: string;
+    name: string;
+    sale_price: number | null;
+    purchase_price: number | null;
+    inventory_account_id: string | null;
+    cogs_account_id: string | null;
+    revenue_account_id: string | null;
+    valuation_method: "weighted_average" | "fifo" | "lifo" | "specific_identification";
+    is_active: boolean;
+  }>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -45,27 +64,44 @@ export function InventoryItemForm({
   const form = useForm({
     resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
-      sku: "",
-      name: "",
-      sale_price: 0,
-      purchase_price: 0,
-      inventory_account_id: "",
-      cogs_account_id: "",
-      revenue_account_id: "",
-      valuation_method: "weighted_average" as const,
-      is_active: true,
+      sku: initialValues?.sku ?? "",
+      name: initialValues?.name ?? "",
+      sale_price: Number(initialValues?.sale_price ?? 0),
+      purchase_price: Number(initialValues?.purchase_price ?? 0),
+      inventory_account_id: initialValues?.inventory_account_id ?? "",
+      cogs_account_id: initialValues?.cogs_account_id ?? "",
+      revenue_account_id: initialValues?.revenue_account_id ?? "",
+      valuation_method: initialValues?.valuation_method ?? ("weighted_average" as const),
+      is_active: initialValues?.is_active !== false,
     },
   });
 
   const onSubmit = (values: any) => {
     startTransition(async () => {
-      const result = await createInventoryItemAction({
-        orgId,
-        ...values,
-      });
+      const result =
+        mode === "edit"
+          ? await updateInventoryItemAction({
+              orgId,
+              id: String(itemId || ""),
+              ...values,
+            })
+          : await createInventoryItemAction({
+              orgId,
+              ...values,
+            });
 
       if (!result.success) {
-        toast.error(result.error || "Failed to create inventory item.");
+        toast.error(
+          result.error ||
+            (mode === "edit" ? "Failed to update inventory item." : "Failed to create inventory item.")
+        );
+        return;
+      }
+
+      if (mode === "edit") {
+        toast.success("Inventory item updated.");
+        router.push(`/${orgId}/inventory`);
+        router.refresh();
         return;
       }
 
@@ -261,7 +297,7 @@ export function InventoryItemForm({
 
         <div className="flex justify-end">
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving..." : "Add inventory item"}
+            {isPending ? "Saving..." : mode === "edit" ? "Save inventory item" : "Add inventory item"}
           </Button>
         </div>
       </form>

@@ -29,10 +29,12 @@ export function BankTransactionsTable({
   orgId,
   transactions,
   reconciliationSessionId,
+  currencyCode,
 }: {
   orgId: string;
   transactions: BankTxnRow[];
   reconciliationSessionId?: string;
+  currencyCode?: string | null;
 }) {
   return (
     <div className="rounded-lg border">
@@ -54,7 +56,7 @@ export function BankTransactionsTable({
                 <TableCell>{formatDate(txn.transaction_date)}</TableCell>
                 <TableCell className="max-w-[20rem] truncate">{txn.description}</TableCell>
                 <TableCell>{txn.reference ?? "-"}</TableCell>
-                <TableCell>{formatCurrency(txn.amount)}</TableCell>
+                <TableCell>{formatCurrency(txn.amount, currencyCode || undefined)}</TableCell>
                 <TableCell>
                   <Badge variant={txn.match_status === "matched" ? "default" : "outline"}>
                     {txn.match_status}

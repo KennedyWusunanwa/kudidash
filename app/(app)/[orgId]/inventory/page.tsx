@@ -1,6 +1,8 @@
 import { Boxes } from "lucide-react";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
+import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
+import { roleHasPermission } from "@/lib/permissions";
 import { InventoryItemForm } from "@/components/forms/inventory-item-form";
 import { InventoryItemsTable } from "@/components/tables/inventory-items-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +13,17 @@ export default async function InventoryPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [items, accounts] = await Promise.all([
+  const [items, accounts, org, membership] = await Promise.all([
     listInventoryItems(orgId),
     listAccountsForSelect(orgId),
+    getOrganizationById(orgId),
+    requireOrgMembership(orgId),
   ]);
+  const baseCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
+  const canManageInventoryAdmin = roleHasPermission(membership.role, "org.manage");
 
   return (
     <div className="space-y-6">
@@ -45,7 +54,12 @@ export default async function InventoryPage({
           <CardTitle className="text-base">Inventory register</CardTitle>
         </CardHeader>
         <CardContent>
-          <InventoryItemsTable orgId={orgId} items={items as any} />
+          <InventoryItemsTable
+            orgId={orgId}
+            items={items as any}
+            currencyCode={baseCurrency}
+            canManageAdmin={canManageInventoryAdmin}
+          />
         </CardContent>
       </Card>
     </div>

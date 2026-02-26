@@ -23,10 +23,19 @@ type BillRow = {
   bill_date: string;
   due_date: string;
   status: string;
+  currency_code?: string | null;
   total: number;
 };
 
-export function BillsTable({ orgId, bills }: { orgId: string; bills: BillRow[] }) {
+export function BillsTable({
+  orgId,
+  bills,
+  currencyCode,
+}: {
+  orgId: string;
+  bills: BillRow[];
+  currencyCode?: string | null;
+}) {
   return (
     <div className="rounded-lg border">
       <Table>
@@ -36,6 +45,7 @@ export function BillsTable({ orgId, bills }: { orgId: string; bills: BillRow[] }
             <TableHead>Date</TableHead>
             <TableHead>Due</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Currency</TableHead>
             <TableHead>Total</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -56,7 +66,13 @@ export function BillsTable({ orgId, bills }: { orgId: string; bills: BillRow[] }
                     {bill.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{formatCurrency(bill.total)}</TableCell>
+                <TableCell>{String(bill.currency_code ?? currencyCode ?? "-")}</TableCell>
+                <TableCell>
+                  {formatCurrency(
+                    bill.total,
+                    (bill.currency_code as string | null | undefined) || currencyCode || undefined
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   {bill.status === "draft" || bill.status === "approved" ? (
                     <Button
@@ -84,7 +100,7 @@ export function BillsTable({ orgId, bills }: { orgId: string; bills: BillRow[] }
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                 No bills.
               </TableCell>
             </TableRow>

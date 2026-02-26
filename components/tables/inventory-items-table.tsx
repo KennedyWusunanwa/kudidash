@@ -1,10 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { startTransition, useOptimistic } from "react";
-import { Power } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Pencil, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deactivateInventoryItemAction } from "@/lib/actions/inventory.actions";
-import { formatDate } from "@/lib/format";
+import {
+  deactivateInventoryItemAction,
+  deleteInventoryItemAction,
+} from "@/lib/actions/inventory.actions";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,18 +49,28 @@ function accountLabel(
 export function InventoryItemsTable({
   orgId,
   items,
+  currencyCode,
+  canManageAdmin = false,
 }: {
   orgId: string;
   items: InventoryRow[];
+  currencyCode?: string | null;
+  canManageAdmin?: boolean;
 }) {
+  const router = useRouter();
   const [optimisticRows, applyOptimistic] = useOptimistic(
     items,
-    (state: InventoryRow[], update: { id: string }) =>
-      state.map((row) => (row.id === update.id ? { ...row, is_active: false } : row))
+    (
+      state: InventoryRow[],
+      update: { type: "deactivate" | "delete"; id: string }
+    ) =>
+      update.type === "delete"
+        ? state.filter((row) => row.id !== update.id)
+        : state.map((row) => (row.id === update.id ? { ...row, is_active: false } : row))
   );
 
   const deactivate = (id: string) => {
-    applyOptimistic({ id });
+    applyOptimistic({ type: "deactivate", id });
     startTransition(async () => {
       const result = await deactivateInventoryItemAction({ orgId, id });
       if (!result.success) {
@@ -63,6 +78,23 @@ export function InventoryItemsTable({
         return;
       }
       toast.success("Inventory item deactivated.");
+    });
+  };
+
+  const deleteItem = (id: string, label: string) => {
+    if (!window.confirm(`Delete inventory item "${label}"? This action cannot be undone.`)) {
+      return;
+    }
+    applyOptimistic({ type: "delete", id });
+    startTransition(async () => {
+      const result = await deleteInventoryItemAction({ orgId, id });
+      if (!result.success) {
+        toast.error(result.error || "Failed to delete inventory item.");
+        router.refresh();
+        return;
+      }
+      toast.success("Inventory item deleted.");
+      router.refresh();
     });
   };
 
@@ -94,8 +126,8 @@ export function InventoryItemsTable({
                   <TableCell className="capitalize">
                     {item.valuation_method.replace(/_/g, " ")}
                   </TableCell>
-                  <TableCell>{Number(item.sale_price ?? 0).toFixed(2)}</TableCell>
-                  <TableCell>{Number(item.purchase_price ?? 0).toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(Number(item.sale_price ?? 0), currencyCode || undefined)}</TableCell>
+                  <TableCell>{formatCurrency(Number(item.purchase_price ?? 0), currencyCode || undefined)}</TableCell>
                   <TableCell>{accountLabel(item.inventory_account)}</TableCell>
                   <TableCell>{accountLabel(item.cogs_account)}</TableCell>
                   <TableCell>{accountLabel(item.revenue_account)}</TableCell>
@@ -106,16 +138,37 @@ export function InventoryItemsTable({
                   </TableCell>
                   <TableCell>{formatDate(item.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deactivate(item.id)}
-                      disabled={!item.is_active}
-                    >
-                      <Power className="size-4" />
-                      Deactivate
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {canManageAdmin ? (
+                        <>
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <Link href={`/${orgId}/inventory/${item.id}`}>
+                              <Pencil className="size-4" />
+                              Edit
+                            </Link>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteItem(item.id, `${item.sku} - ${item.name}`)}
+                          >
+                            <Trash2 className="size-4" />
+                            Delete
+                          </Button>
+                        </>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deactivate(item.id)}
+                        disabled={!item.is_active}
+                      >
+                        <Power className="size-4" />
+                        Deactivate
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -143,10 +196,10 @@ export function InventoryItemsTable({
                     {item.valuation_method.replace(/_/g, " ")}
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
-                    Sale: {Number(item.sale_price ?? 0).toFixed(2)}
+                    Sale: {formatCurrency(Number(item.sale_price ?? 0), currencyCode || undefined)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    Purchase: {Number(item.purchase_price ?? 0).toFixed(2)}
+                    Purchase: {formatCurrency(Number(item.purchase_price ?? 0), currencyCode || undefined)}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Inventory: {accountLabel(item.inventory_account)}
@@ -166,16 +219,37 @@ export function InventoryItemsTable({
                 </Badge>
               </div>
               <div className="mt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => deactivate(item.id)}
-                  disabled={!item.is_active}
-                >
-                  <Power className="size-4" />
-                  Deactivate
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {canManageAdmin ? (
+                    <>
+                      <Button asChild type="button" variant="outline" size="sm">
+                        <Link href={`/${orgId}/inventory/${item.id}`}>
+                          <Pencil className="size-4" />
+                          Edit
+                        </Link>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteItem(item.id, `${item.sku} - ${item.name}`)}
+                      >
+                        <Trash2 className="size-4" />
+                        Delete
+                      </Button>
+                    </>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => deactivate(item.id)}
+                    disabled={!item.is_active}
+                  >
+                    <Power className="size-4" />
+                    Deactivate
+                  </Button>
+                </div>
               </div>
             </div>
           ))

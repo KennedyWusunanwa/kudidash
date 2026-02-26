@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, PlusCircle } from "lucide-react";
 import { listCustomersWithSummary } from "@/lib/data/customers.data";
+import { getOrganizationById } from "@/lib/data/org.data";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { CustomerForm } from "@/components/forms/customer-form";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,11 @@ export default async function CustomersPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const customers = await listCustomersWithSummary(orgId);
+  const [customers, org] = await Promise.all([listCustomersWithSummary(orgId), getOrganizationById(orgId)]);
+  const baseCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -53,6 +58,9 @@ export default async function CustomersPage({
           <CardTitle className="text-base">Customer directory</CardTitle>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Monetary summary columns are shown in base currency: {baseCurrency ?? "GHS"}.
+          </p>
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
@@ -99,13 +107,13 @@ export default async function CustomersPage({
                       </TableCell>
                       <TableCell className="align-top">{customer.invoice_count}</TableCell>
                       <TableCell className="align-top">
-                        {formatCurrency(customer.invoice_total)}
+                        {formatCurrency(customer.invoice_total, baseCurrency)}
                       </TableCell>
                       <TableCell className="align-top">
-                        {customer.receipt_count} ({formatCurrency(customer.receipt_total)})
+                        {customer.receipt_count} ({formatCurrency(customer.receipt_total, baseCurrency)})
                       </TableCell>
                       <TableCell className="align-top">
-                        {formatCurrency(customer.outstanding_balance)}
+                        {formatCurrency(customer.outstanding_balance, baseCurrency)}
                       </TableCell>
                       <TableCell className="align-top text-xs">
                         {formatDate(customer.last_activity_at)}

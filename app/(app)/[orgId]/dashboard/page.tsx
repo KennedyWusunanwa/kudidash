@@ -90,10 +90,16 @@ export default async function DashboardPage({
 
       <section className="grid gap-6 xl:grid-cols-2">
         <ChartCard title="Revenue by Period" subtitle="Monthly posted revenue">
-          <RevenueAreaChart data={normalizedSeries.map((row) => ({ period: row.period, revenue: row.revenue }))} />
+          <RevenueAreaChart
+            data={normalizedSeries.map((row) => ({ period: row.period, revenue: row.revenue }))}
+            currencyCode={dashboardCurrency}
+          />
         </ChartCard>
         <ChartCard title="Expenses by Period" subtitle="Monthly posted expenses">
-          <ExpensesLineChart data={normalizedSeries.map((row) => ({ period: row.period, expenses: row.expenses }))} />
+          <ExpensesLineChart
+            data={normalizedSeries.map((row) => ({ period: row.period, expenses: row.expenses }))}
+            currencyCode={dashboardCurrency}
+          />
         </ChartCard>
       </section>
 
