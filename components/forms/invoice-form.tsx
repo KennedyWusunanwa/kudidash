@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useEffect, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -12,6 +12,7 @@ import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { invoiceSchema } from "@/lib/validators/invoice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const today = new Date().toISOString().slice(0, 10);
+
+interface CustomerOption {
+  id: string;
+  label: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  billing_address?: string | null;
+  description?: string | null;
+}
 
 interface Option {
   id: string;
@@ -50,7 +61,7 @@ export function InvoiceForm({
   inventoryItems = [],
 }: {
   orgId: string;
-  customers: Option[];
+  customers: CustomerOption[];
   revenueAccounts: Option[];
   inventoryItems?: InventoryItemOption[];
 }) {
@@ -59,7 +70,12 @@ export function InvoiceForm({
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
-      customer_id: customers[0]?.id ?? "",
+      customer_id: customers[0]?.id ?? "__new__",
+      customer_name: customers[0]?.name ?? customers[0]?.label ?? "",
+      customer_email: customers[0]?.email ?? "",
+      customer_phone: customers[0]?.phone ?? "",
+      customer_billing_address: customers[0]?.billing_address ?? "",
+      customer_description: customers[0]?.description ?? "",
       invoice_date: today,
       due_date: today,
       currency_code: DEFAULT_CURRENCY_CODE,
@@ -77,11 +93,44 @@ export function InvoiceForm({
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "lines" });
+  const selectedCustomerId = useWatch({ control: form.control, name: "customer_id" });
   const lines = useWatch({ control: form.control, name: "lines" });
+  const customersById = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer])),
+    [customers]
+  );
   const inventoryItemsByValue = useMemo(
     () => new Map(inventoryItems.map((item) => [item.value, item])),
     [inventoryItems]
   );
+
+  useEffect(() => {
+    if (selectedCustomerId === "__new__") {
+      form.setValue("customer_name", "", { shouldDirty: false, shouldValidate: true });
+      form.setValue("customer_email", "", { shouldDirty: false, shouldValidate: true });
+      form.setValue("customer_phone", "", { shouldDirty: false, shouldValidate: true });
+      form.setValue("customer_billing_address", "", { shouldDirty: false, shouldValidate: true });
+      form.setValue("customer_description", "", { shouldDirty: false, shouldValidate: true });
+      return;
+    }
+
+    const customer = customersById.get(selectedCustomerId ?? "");
+    if (!customer) return;
+    form.setValue("customer_name", customer.name ?? customer.label ?? "", {
+      shouldDirty: false,
+      shouldValidate: true,
+    });
+    form.setValue("customer_email", customer.email ?? "", { shouldDirty: false, shouldValidate: true });
+    form.setValue("customer_phone", customer.phone ?? "", { shouldDirty: false, shouldValidate: true });
+    form.setValue("customer_billing_address", customer.billing_address ?? "", {
+      shouldDirty: false,
+      shouldValidate: true,
+    });
+    form.setValue("customer_description", customer.description ?? "", {
+      shouldDirty: false,
+      shouldValidate: true,
+    });
+  }, [customersById, form, selectedCustomerId]);
   const totals = useMemo(() => {
     const subtotal = (lines ?? []).reduce(
       (sum, line) => sum + Number(line?.quantity ?? 0) * Number(line?.unit_price ?? 0),
@@ -127,10 +176,11 @@ export function InvoiceForm({
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select customer" />
+                          <SelectValue placeholder="Select or create customer" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="__new__">Add new customer</SelectItem>
                         {customers.map((customer) => (
                           <SelectItem key={customer.id} value={customer.id}>
                             {customer.label}
@@ -192,6 +242,87 @@ export function InvoiceForm({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Customer details</h3>
+                <p className="text-xs text-muted-foreground">
+                  Selecting a saved customer auto-fills these fields.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="customer_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...(field as any)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customer_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...(field as any)} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customer_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input {...(field as any)} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customer_billing_address"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Billing address</FormLabel>
+                      <FormControl>
+                        <Textarea {...(field as any)} value={field.value ?? ""} rows={3} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customer_description"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Short description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...(field as any)}
+                          value={field.value ?? ""}
+                          rows={2}
+                          placeholder="Optional customer note"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -366,7 +497,7 @@ export function InvoiceForm({
               </div>
             </div>
 
-            <Button type="submit" disabled={isPending || !customers.length || !revenueAccounts.length}>
+            <Button type="submit" disabled={isPending || !revenueAccounts.length}>
               {isPending ? "Creating..." : "Create draft invoice"}
             </Button>
           </form>

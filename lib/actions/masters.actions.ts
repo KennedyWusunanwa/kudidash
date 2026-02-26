@@ -13,6 +13,9 @@ const customerSchema = z.object({
   orgId: z.string().uuid(),
   name: z.string().trim().min(2).max(120),
   email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  billing_address: z.string().trim().max(500).optional().or(z.literal("")),
+  description: z.string().trim().max(240).optional().or(z.literal("")),
 });
 
 const vendorSchema = z.object({
@@ -35,6 +38,9 @@ export async function createCustomerAction(
       org_id: parsed.orgId,
       name: parsed.name,
       email: parsed.email || null,
+      phone: parsed.phone || null,
+      billing_address: parsed.billing_address || null,
+      description: parsed.description || null,
       is_active: true,
     });
     if (error) throw error;

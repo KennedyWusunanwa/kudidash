@@ -2,8 +2,6 @@ import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listCustomers } from "@/lib/data/invoices.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
 import { InvoiceForm } from "@/components/forms/invoice-form";
-import { CustomerForm } from "@/components/forms/customer-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function NewInvoicePage({
   params,
@@ -30,22 +28,16 @@ export default async function NewInvoicePage({
         </p>
       </div>
 
-      {!customers.length ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Create a customer first</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CustomerForm orgId={orgId} />
-          </CardContent>
-        </Card>
-      ) : null}
-
       <InvoiceForm
         orgId={orgId}
         customers={(customers as Array<Record<string, unknown>>).map((c) => ({
           id: String(c.id),
           label: String(c.name),
+          name: typeof c.name === "string" ? c.name : "",
+          email: typeof c.email === "string" ? c.email : "",
+          phone: typeof c.phone === "string" ? c.phone : "",
+          billing_address: typeof c.billing_address === "string" ? c.billing_address : "",
+          description: typeof c.description === "string" ? c.description : "",
         }))}
         revenueAccounts={revenueAccounts}
         inventoryItems={(inventoryItems as Array<Record<string, unknown>>)

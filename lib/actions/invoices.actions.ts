@@ -23,6 +23,38 @@ export async function createDraftInvoiceAction(
       return { success: true, data: { invoiceId: crypto.randomUUID() } };
     }
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "sales.manage");
+    const customerPayload = {
+      name: parsed.customer_name,
+      email: parsed.customer_email || null,
+      phone: parsed.customer_phone || null,
+      billing_address: parsed.customer_billing_address || null,
+      description: parsed.customer_description || null,
+      is_active: true,
+    };
+
+    let customerId: string;
+    if (parsed.customer_id === "__new__") {
+      const { data: createdCustomer, error: customerError } = await supabase
+        .from("customers")
+        .insert({
+          org_id: parsed.orgId,
+          ...customerPayload,
+        })
+        .select("id")
+        .single();
+      if (customerError) throw customerError;
+      customerId = String(createdCustomer.id);
+    } else {
+      const { data: updatedCustomer, error: customerError } = await supabase
+        .from("customers")
+        .update(customerPayload)
+        .eq("org_id", parsed.orgId)
+        .eq("id", parsed.customer_id)
+        .select("id")
+        .single();
+      if (customerError) throw customerError;
+      customerId = String(updatedCustomer.id);
+    }
 
     const subtotal = Number(
       parsed.lines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0).toFixed(2)
@@ -36,7 +68,7 @@ export async function createDraftInvoiceAction(
       .from("invoices")
       .insert({
         org_id: parsed.orgId,
-        customer_id: parsed.customer_id,
+        customer_id: customerId,
         invoice_date: parsed.invoice_date,
         due_date: parsed.due_date,
         currency_code: parsed.currency_code.toUpperCase(),
@@ -64,7 +96,7 @@ export async function createDraftInvoiceAction(
     const { error: lineError } = await supabase.from("invoice_lines").insert(lines);
     if (lineError) throw lineError;
 
-    revalidateOrgPaths(parsed.orgId, ["/invoices", "/dashboard"]);
+    revalidateOrgPaths(parsed.orgId, ["/invoices", "/invoices/new", "/dashboard"]);
     return { success: true, data: { invoiceId: invoice.id as string } };
   } catch (error) {
     return { success: false, error: parseActionError(error) };

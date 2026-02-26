@@ -1,5 +1,11 @@
 import { endOfMonth, formatISO, startOfMonth } from "date-fns";
-import { getBalanceSheet, getProfitAndLoss, getTrialBalance } from "@/lib/data/reports.data";
+import {
+  getBalanceSheet,
+  getCustomerTransactionRows,
+  getProfitAndLoss,
+  summarizeCustomerTransactionRows,
+  getTrialBalance,
+} from "@/lib/data/reports.data";
 import { ReportsSummaryChart } from "@/components/charts/reports-summary-chart";
 import { ExportCsvButton } from "@/components/tables/export-csv-button";
 import { ReportTable } from "@/components/tables/report-table";
@@ -16,11 +22,15 @@ export default async function ReportsPage({
   const startDate = formatISO(startOfMonth(now), { representation: "date" });
   const endDate = formatISO(endOfMonth(now), { representation: "date" });
 
-  const [trialBalance, pnl, balanceSheet] = await Promise.all([
+  const [trialBalance, pnl, balanceSheet, customerTransactions] = await Promise.all([
     getTrialBalance(orgId, endDate),
     getProfitAndLoss(orgId, startDate, endDate),
     getBalanceSheet(orgId, endDate),
+    getCustomerTransactionRows(orgId, startDate, endDate),
   ]);
+  const customerTransactionSummary = summarizeCustomerTransactionRows(
+    customerTransactions as Array<Record<string, string | number | null | undefined>>
+  );
 
   const summaryChartData = [
     {
@@ -66,6 +76,7 @@ export default async function ReportsPage({
           <TabsTrigger value="trial-balance">Trial Balance</TabsTrigger>
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
+          <TabsTrigger value="customer-transactions">Customer Transactions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="trial-balance" className="space-y-3">
@@ -111,6 +122,35 @@ export default async function ReportsPage({
               { key: "account_code", label: "Code" },
               { key: "account_name", label: "Account" },
               { key: "amount", label: "Amount", type: "currency" },
+            ]}
+          />
+        </TabsContent>
+
+        <TabsContent value="customer-transactions" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Customer transaction exports for the report period ({startDate} to {endDate}).
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <ExportCsvButton
+                filename={`customer-transaction-summary-${startDate}-to-${endDate}.csv`}
+                rows={customerTransactionSummary as never[]}
+              />
+              <ExportCsvButton
+                filename={`customer-transactions-${startDate}-to-${endDate}.csv`}
+                rows={customerTransactions as never[]}
+              />
+            </div>
+          </div>
+          <ReportTable
+            rows={customerTransactionSummary as never[]}
+            columns={[
+              { key: "customer_name", label: "Customer" },
+              { key: "invoice_count", label: "Invoices" },
+              { key: "invoice_total", label: "Invoice Total", type: "currency" },
+              { key: "receipt_count", label: "Receipts" },
+              { key: "receipt_total", label: "Receipt Total", type: "currency" },
+              { key: "net_balance", label: "Net AR", type: "currency" },
             ]}
           />
         </TabsContent>

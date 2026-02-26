@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { createCustomerAction } from "@/lib/actions/masters.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -21,6 +22,9 @@ import {
 const schema = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  billing_address: z.string().trim().max(500).optional().or(z.literal("")),
+  description: z.string().trim().max(240).optional().or(z.literal("")),
 });
 
 type InputType = z.infer<typeof schema>;
@@ -30,7 +34,13 @@ export function CustomerForm({ orgId }: { orgId: string }) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<InputType>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "" },
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      billing_address: "",
+      description: "",
+    },
   });
 
   const onSubmit = (values: InputType) => {
@@ -48,7 +58,7 @@ export function CustomerForm({ orgId }: { orgId: string }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3 md:grid-cols-3">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3 md:grid-cols-2">
         <FormField
           control={form.control}
           name="name"
@@ -70,6 +80,50 @@ export function CustomerForm({ orgId }: { orgId: string }) {
               <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input type="email" {...(field as any)} value={field.value ?? ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone</FormLabel>
+              <FormControl>
+                <Input {...(field as any)} value={field.value ?? ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="billing_address"
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Billing address</FormLabel>
+              <FormControl>
+                <Textarea {...(field as any)} value={field.value ?? ""} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Short description</FormLabel>
+              <FormControl>
+                <Textarea
+                  {...(field as any)}
+                  value={field.value ?? ""}
+                  rows={2}
+                  placeholder="Optional note about this customer"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
