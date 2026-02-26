@@ -23,6 +23,7 @@ function buildNav(orgId: string) {
     { href: `/${orgId}/coa`, label: "Chart of Accounts", icon: Building2 },
     { href: `/${orgId}/journals`, label: "Journals", icon: FileText },
     { href: `/${orgId}/invoices`, label: "Invoices", icon: Receipt },
+    { href: `/${orgId}/customers`, label: "Customers", icon: Users },
     { href: `/${orgId}/bills`, label: "Bills", icon: FileText },
     { href: `/${orgId}/inventory`, label: "Inventory", icon: Boxes },
     { href: `/${orgId}/banking/reconciliation`, label: "Banking", icon: Landmark },

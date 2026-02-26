@@ -40,9 +40,13 @@ export default async function InvoicesPage({
           <div className="flex flex-wrap gap-2">
             {customers.length ? (
               customers.map((customer) => (
-                <span key={customer.id} className="rounded-full border px-3 py-1 text-sm">
+                <Link
+                  key={customer.id}
+                  href={`/${orgId}/customers/${String(customer.id)}`}
+                  className="rounded-full border px-3 py-1 text-sm hover:bg-accent"
+                >
                   {String(customer.name)}
-                </span>
+                </Link>
               ))
             ) : (
               <p className="text-sm text-muted-foreground">No customers yet.</p>

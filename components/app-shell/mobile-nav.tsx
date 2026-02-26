@@ -19,6 +19,7 @@ function navItems(orgId: string) {
     { href: `/${orgId}/coa`, label: "Chart of Accounts" },
     { href: `/${orgId}/journals`, label: "Journals" },
     { href: `/${orgId}/invoices`, label: "Invoices" },
+    { href: `/${orgId}/customers`, label: "Customers" },
     { href: `/${orgId}/bills`, label: "Bills" },
     { href: `/${orgId}/inventory`, label: "Inventory" },
     { href: `/${orgId}/banking/reconciliation`, label: "Banking" },
