@@ -3,6 +3,7 @@ import { getDashboardKpis, getRevenueExpenseSeries } from "@/lib/data/reports.da
 import { listBillsToApprove } from "@/lib/data/bills.data";
 import { listRecentInvoices } from "@/lib/data/invoices.data";
 import { listPendingJournals } from "@/lib/data/journals.data";
+import { getOrganizationById } from "@/lib/data/org.data";
 import { ChartCard } from "@/components/app-shell/chart-card";
 import { KpiCard } from "@/components/app-shell/kpi-card";
 import { RevenueAreaChart } from "@/components/charts/revenue-area-chart";
@@ -17,13 +18,18 @@ export default async function DashboardPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [kpis, series, recentInvoices, billsToApprove, pendingJournals] = await Promise.all([
+  const [kpis, series, recentInvoices, billsToApprove, pendingJournals, org] = await Promise.all([
     getDashboardKpis(orgId),
     getRevenueExpenseSeries(orgId),
     listRecentInvoices(orgId),
     listBillsToApprove(orgId),
     listPendingJournals(orgId),
+    getOrganizationById(orgId),
   ]);
+  const dashboardCurrency =
+    typeof org?.base_currency === "string" && org.base_currency.trim()
+      ? org.base_currency.trim().toUpperCase()
+      : undefined;
 
   const normalizedSeries: Array<{
     period: string;
@@ -37,24 +43,49 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-6 text-sm">
+          <div>
+            <span className="font-medium">Dashboard base currency:</span>{" "}
+            <span>{dashboardCurrency ?? "GHS"}</span>
+          </div>
+          <p className="text-muted-foreground">
+            KPIs use the base currency from Settings. Document lists show each invoice/bill currency.
+          </p>
+        </CardContent>
+      </Card>
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard
           title="Cash"
           value={Number(kpis.cash ?? 0)}
           description="Mapped from cash/bank accounts and org account settings"
+          currency={dashboardCurrency}
         />
         <KpiCard
           title="Revenue MTD"
           value={Number(kpis.revenue_mtd ?? 0)}
           description="Posted income credits"
+          currency={dashboardCurrency}
         />
         <KpiCard
           title="Expenses MTD"
           value={Number(kpis.expenses_mtd ?? 0)}
           description="Posted expense debits"
+          currency={dashboardCurrency}
         />
-        <KpiCard title="AR" value={Number(kpis.ar ?? 0)} description="Control account balance" />
-        <KpiCard title="AP" value={Number(kpis.ap ?? 0)} description="Control account balance" />
+        <KpiCard
+          title="AR"
+          value={Number(kpis.ar ?? 0)}
+          description="Control account balance"
+          currency={dashboardCurrency}
+        />
+        <KpiCard
+          title="AP"
+          value={Number(kpis.ap ?? 0)}
+          description="Control account balance"
+          currency={dashboardCurrency}
+        />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
@@ -87,8 +118,16 @@ export default async function DashboardPage({
                     <p className="text-xs text-muted-foreground">
                       {formatDate(invoice.invoice_date)} · {invoice.status}
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      Currency: {String(invoice.currency_code ?? dashboardCurrency ?? "-")}
+                    </p>
                   </div>
-                  <div className="text-sm">{formatCurrency(Number(invoice.total ?? 0))}</div>
+                  <div className="text-sm">
+                    {formatCurrency(
+                      Number(invoice.total ?? 0),
+                      (invoice.currency_code as string | null | undefined) || dashboardCurrency
+                    )}
+                  </div>
                 </Link>
               ))
             ) : (
@@ -115,8 +154,16 @@ export default async function DashboardPage({
                   <div>
                     <p className="text-sm font-medium">{bill.bill_no ?? bill.id.slice(0, 8)}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(bill.bill_date)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Currency: {String(bill.currency_code ?? dashboardCurrency ?? "-")}
+                    </p>
                   </div>
-                  <div className="text-sm">{formatCurrency(Number(bill.total ?? 0))}</div>
+                  <div className="text-sm">
+                    {formatCurrency(
+                      Number(bill.total ?? 0),
+                      (bill.currency_code as string | null | undefined) || dashboardCurrency
+                    )}
+                  </div>
                 </Link>
               ))
             ) : (

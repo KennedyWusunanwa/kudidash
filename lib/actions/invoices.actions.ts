@@ -23,6 +23,17 @@ export async function createDraftInvoiceAction(
       return { success: true, data: { invoiceId: crypto.randomUUID() } };
     }
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "sales.manage");
+    const { data: orgRow, error: orgError } = await supabase
+      .from("organizations")
+      .select("base_currency")
+      .eq("id", parsed.orgId)
+      .single();
+    if (orgError) throw orgError;
+    const orgBaseCurrency =
+      typeof orgRow?.base_currency === "string" && orgRow.base_currency.trim()
+        ? orgRow.base_currency.trim().toUpperCase()
+        : parsed.currency_code.toUpperCase();
+
     const customerPayload = {
       name: parsed.customer_name,
       email: parsed.customer_email || null,
@@ -71,7 +82,7 @@ export async function createDraftInvoiceAction(
         customer_id: customerId,
         invoice_date: parsed.invoice_date,
         due_date: parsed.due_date,
-        currency_code: parsed.currency_code.toUpperCase(),
+        currency_code: orgBaseCurrency,
         notes: parsed.notes || null,
         subtotal,
         tax_total,

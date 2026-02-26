@@ -1,6 +1,7 @@
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listCustomers } from "@/lib/data/invoices.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
+import { getOrganizationById } from "@/lib/data/org.data";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 
 export default async function NewInvoicePage({
@@ -9,10 +10,11 @@ export default async function NewInvoicePage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [customers, accounts, inventoryItems] = await Promise.all([
+  const [customers, accounts, inventoryItems, org] = await Promise.all([
     listCustomers(orgId),
     listAccountsForSelect(orgId),
     listInventoryItems(orgId),
+    getOrganizationById(orgId),
   ]);
 
   const revenueAccounts = accounts.filter(
@@ -30,6 +32,11 @@ export default async function NewInvoicePage({
 
       <InvoiceForm
         orgId={orgId}
+        defaultCurrencyCode={
+          typeof org?.base_currency === "string" && org.base_currency.trim()
+            ? org.base_currency
+            : undefined
+        }
         customers={(customers as Array<Record<string, unknown>>).map((c) => ({
           id: String(c.id),
           label: String(c.name),

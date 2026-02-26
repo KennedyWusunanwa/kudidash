@@ -64,7 +64,7 @@ export async function updateOrgSettingsAction(
   try {
     const parsed = orgSettingsSchema.parse(input);
     if (isDemoMode()) {
-      revalidateOrgPaths(parsed.orgId, ["/settings", "/dashboard"]);
+      revalidateOrgPaths(parsed.orgId, ["/settings", "/dashboard", "/invoices", "/invoices/new"]);
       return { success: true };
     }
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "org.manage");
@@ -103,6 +103,7 @@ export async function updateOrgSettingsAction(
       "/dashboard",
       "/coa",
       "/invoices",
+      "/invoices/new",
       "/bills",
       "/reports",
       "/inventory",

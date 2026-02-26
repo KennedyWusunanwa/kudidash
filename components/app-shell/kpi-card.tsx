@@ -5,9 +5,10 @@ interface KpiCardProps {
   title: string;
   value: number;
   description?: string;
+  currency?: string | null;
 }
 
-export function KpiCard({ title, value, description }: KpiCardProps) {
+export function KpiCard({ title, value, description, currency }: KpiCardProps) {
   return (
     <Card className="border-border/70 bg-card/80 backdrop-blur">
       <CardHeader className="pb-2">
@@ -17,7 +18,7 @@ export function KpiCard({ title, value, description }: KpiCardProps) {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-semibold tracking-tight">
-          {formatCurrency(value)}
+          {formatCurrency(value, currency || undefined)}
         </div>
         {description ? (
           <p className="mt-1 text-xs text-muted-foreground">{description}</p>

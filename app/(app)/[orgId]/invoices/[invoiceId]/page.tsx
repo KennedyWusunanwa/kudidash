@@ -28,6 +28,10 @@ export default async function InvoiceDetailPage({
   const lines = Array.isArray(invoice.invoice_lines)
     ? (invoice.invoice_lines as Array<Record<string, unknown>>)
     : [];
+  const invoiceCurrency =
+    typeof invoice.currency_code === "string" && invoice.currency_code.trim()
+      ? invoice.currency_code.trim().toUpperCase()
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -53,16 +57,26 @@ export default async function InvoiceDetailPage({
             <p className="font-medium capitalize">{String(invoice.status ?? "-")}</p>
           </div>
           <div>
+            <p className="text-xs text-muted-foreground">Currency</p>
+            <p className="font-medium">{invoiceCurrency ?? "-"}</p>
+          </div>
+          <div>
             <p className="text-xs text-muted-foreground">Subtotal</p>
-            <p className="font-medium">{formatCurrency(Number(invoice.subtotal ?? 0))}</p>
+            <p className="font-medium">
+              {formatCurrency(Number(invoice.subtotal ?? 0), invoiceCurrency)}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Tax</p>
-            <p className="font-medium">{formatCurrency(Number(invoice.tax_total ?? 0))}</p>
+            <p className="font-medium">
+              {formatCurrency(Number(invoice.tax_total ?? 0), invoiceCurrency)}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="font-medium">{formatCurrency(Number(invoice.total ?? 0))}</p>
+            <p className="font-medium">
+              {formatCurrency(Number(invoice.total ?? 0), invoiceCurrency)}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -81,6 +95,7 @@ export default async function InvoiceDetailPage({
                 invoice_date: String(invoice.invoice_date ?? ""),
                 due_date: String(invoice.due_date ?? ""),
                 status: String(invoice.status ?? "draft"),
+                currency_code: invoiceCurrency ?? null,
                 total: Number(invoice.total ?? 0),
               },
             ]}
@@ -112,9 +127,15 @@ export default async function InvoiceDetailPage({
                       <TableCell>{String(line.line_no ?? "")}</TableCell>
                       <TableCell>{String(line.description ?? "-")}</TableCell>
                       <TableCell>{formatNumber(Number(line.quantity ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(line.unit_price ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(line.tax_amount ?? 0))}</TableCell>
-                      <TableCell>{formatCurrency(Number(line.line_total ?? 0))}</TableCell>
+                      <TableCell>
+                        {formatCurrency(Number(line.unit_price ?? 0), invoiceCurrency)}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(Number(line.tax_amount ?? 0), invoiceCurrency)}
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(Number(line.line_total ?? 0), invoiceCurrency)}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (

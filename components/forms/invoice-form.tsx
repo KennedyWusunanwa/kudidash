@@ -9,6 +9,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createDraftInvoiceAction } from "@/lib/actions/invoices.actions";
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
+import { formatCurrency } from "@/lib/format";
 import { invoiceSchema } from "@/lib/validators/invoice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,17 +57,21 @@ interface InventoryItemOption {
 
 export function InvoiceForm({
   orgId,
+  defaultCurrencyCode,
   customers,
   revenueAccounts,
   inventoryItems = [],
 }: {
   orgId: string;
+  defaultCurrencyCode?: string | null;
   customers: CustomerOption[];
   revenueAccounts: Option[];
   inventoryItems?: InventoryItemOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const lockedCurrencyCode =
+    (defaultCurrencyCode || DEFAULT_CURRENCY_CODE).trim().toUpperCase() || DEFAULT_CURRENCY_CODE;
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -78,7 +83,7 @@ export function InvoiceForm({
       customer_description: customers[0]?.description ?? "",
       invoice_date: today,
       due_date: today,
-      currency_code: DEFAULT_CURRENCY_CODE,
+      currency_code: lockedCurrencyCode,
       notes: "",
       lines: [
         {
@@ -94,6 +99,7 @@ export function InvoiceForm({
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "lines" });
   const selectedCustomerId = useWatch({ control: form.control, name: "customer_id" });
+  const invoiceCurrencyCode = useWatch({ control: form.control, name: "currency_code" });
   const lines = useWatch({ control: form.control, name: "lines" });
   const customersById = useMemo(
     () => new Map(customers.map((customer) => [customer.id, customer])),
@@ -103,6 +109,15 @@ export function InvoiceForm({
     () => new Map(inventoryItems.map((item) => [item.value, item])),
     [inventoryItems]
   );
+
+  useEffect(() => {
+    if ((form.getValues("currency_code") || "").toUpperCase() !== lockedCurrencyCode) {
+      form.setValue("currency_code", lockedCurrencyCode as any, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
+    }
+  }, [form, lockedCurrencyCode]);
 
   useEffect(() => {
     if (selectedCustomerId === "__new__") {
@@ -198,7 +213,7 @@ export function InvoiceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select currency" />
@@ -212,6 +227,9 @@ export function InvoiceForm({
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Default currency is controlled in Settings by an admin/owner.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -485,15 +503,15 @@ export function InvoiceForm({
             <div className="grid gap-2 rounded-lg border bg-muted/30 p-4 text-sm sm:max-w-sm sm:ml-auto">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>{totals.subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(totals.subtotal, invoiceCurrencyCode || lockedCurrencyCode)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax</span>
-                <span>{totals.tax.toFixed(2)}</span>
+                <span>{formatCurrency(totals.tax, invoiceCurrencyCode || lockedCurrencyCode)}</span>
               </div>
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
-                <span>{totals.total.toFixed(2)}</span>
+                <span>{formatCurrency(totals.total, invoiceCurrencyCode || lockedCurrencyCode)}</span>
               </div>
             </div>
 

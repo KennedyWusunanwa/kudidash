@@ -23,6 +23,7 @@ type InvoiceRow = {
   invoice_date: string;
   due_date: string;
   status: string;
+  currency_code?: string | null;
   total: number;
 };
 
@@ -36,6 +37,7 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
             <TableHead>Date</TableHead>
             <TableHead>Due</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Currency</TableHead>
             <TableHead>Total</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -56,7 +58,8 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
                     {invoice.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{formatCurrency(invoice.total)}</TableCell>
+                <TableCell>{String(invoice.currency_code ?? "-")}</TableCell>
+                <TableCell>{formatCurrency(invoice.total, invoice.currency_code || undefined)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button asChild type="button" size="sm" variant="outline">
@@ -91,7 +94,7 @@ export function InvoicesTable({ orgId, invoices }: { orgId: string; invoices: In
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+              <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                 No invoices.
               </TableCell>
             </TableRow>
