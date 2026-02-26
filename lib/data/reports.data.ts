@@ -127,7 +127,7 @@ function summarizeCustomerTransactions(rows: CsvRow[]) {
   }
 
   return [...byCustomer.values()]
-    .map((row) => ({
+    .map((row): CsvRow => ({
       ...row,
       invoice_total: Number(Number(row.invoice_total ?? 0).toFixed(2)),
       receipt_total: Number(Number(row.receipt_total ?? 0).toFixed(2)),
