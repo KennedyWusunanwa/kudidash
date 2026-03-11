@@ -19,6 +19,12 @@ export const inventoryItemSchema = z.object({
   name: z.string().trim().min(2).max(160),
   sale_price: money.default(0),
   purchase_price: money.default(0),
+  quantity_on_hand: z
+    .coerce.number()
+    .finite()
+    .min(0)
+    .transform((n) => Number(n.toFixed(4)))
+    .default(0),
   inventory_account_id: optionalUuidString.optional(),
   cogs_account_id: optionalUuidString.optional(),
   revenue_account_id: optionalUuidString.optional(),

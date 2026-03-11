@@ -9,7 +9,7 @@ import {
   deactivateInventoryItemAction,
   deleteInventoryItemAction,
 } from "@/lib/actions/inventory.actions";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,8 @@ type InventoryRow = {
   name: string;
   sale_price?: number | null;
   purchase_price?: number | null;
+  quantity_on_hand?: number | null;
+  stock_value?: number | null;
   valuation_method: string;
   is_active: boolean;
   created_at?: string;
@@ -50,11 +52,13 @@ export function InventoryItemsTable({
   orgId,
   items,
   currencyCode,
+  canManageInventory = false,
   canManageAdmin = false,
 }: {
   orgId: string;
   items: InventoryRow[];
   currencyCode?: string | null;
+  canManageInventory?: boolean;
   canManageAdmin?: boolean;
 }) {
   const router = useRouter();
@@ -75,9 +79,11 @@ export function InventoryItemsTable({
       const result = await deactivateInventoryItemAction({ orgId, id });
       if (!result.success) {
         toast.error(result.error || "Failed to deactivate inventory item.");
+        router.refresh();
         return;
       }
       toast.success("Inventory item deactivated.");
+      router.refresh();
     });
   };
 
@@ -109,6 +115,8 @@ export function InventoryItemsTable({
               <TableHead>Valuation</TableHead>
               <TableHead>Sale Price</TableHead>
               <TableHead>Purchase Price</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Stock Value</TableHead>
               <TableHead>Inventory Account</TableHead>
               <TableHead>COGS Account</TableHead>
               <TableHead>Revenue Account</TableHead>
@@ -128,6 +136,8 @@ export function InventoryItemsTable({
                   </TableCell>
                   <TableCell>{formatCurrency(Number(item.sale_price ?? 0), currencyCode || undefined)}</TableCell>
                   <TableCell>{formatCurrency(Number(item.purchase_price ?? 0), currencyCode || undefined)}</TableCell>
+                  <TableCell>{formatNumber(Number(item.quantity_on_hand ?? 0))}</TableCell>
+                  <TableCell>{formatCurrency(Number(item.stock_value ?? 0), currencyCode || undefined)}</TableCell>
                   <TableCell>{accountLabel(item.inventory_account)}</TableCell>
                   <TableCell>{accountLabel(item.cogs_account)}</TableCell>
                   <TableCell>{accountLabel(item.revenue_account)}</TableCell>
@@ -158,23 +168,25 @@ export function InventoryItemsTable({
                           </Button>
                         </>
                       ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deactivate(item.id)}
-                        disabled={!item.is_active}
-                      >
-                        <Power className="size-4" />
-                        Deactivate
-                      </Button>
+                      {canManageInventory ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deactivate(item.id)}
+                          disabled={!item.is_active}
+                        >
+                          <Power className="size-4" />
+                          Deactivate
+                        </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
                   No inventory items yet.
                 </TableCell>
               </TableRow>
@@ -190,7 +202,7 @@ export function InventoryItemsTable({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold">
-                    {item.sku} · {item.name}
+                    {item.sku} - {item.name}
                   </div>
                   <div className="text-xs text-muted-foreground capitalize">
                     {item.valuation_method.replace(/_/g, " ")}
@@ -200,6 +212,12 @@ export function InventoryItemsTable({
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Purchase: {formatCurrency(Number(item.purchase_price ?? 0), currencyCode || undefined)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Qty on hand: {formatNumber(Number(item.quantity_on_hand ?? 0))}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Stock value: {formatCurrency(Number(item.stock_value ?? 0), currencyCode || undefined)}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Inventory: {accountLabel(item.inventory_account)}
@@ -239,16 +257,18 @@ export function InventoryItemsTable({
                       </Button>
                     </>
                   ) : null}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deactivate(item.id)}
-                    disabled={!item.is_active}
-                  >
-                    <Power className="size-4" />
-                    Deactivate
-                  </Button>
+                  {canManageInventory ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deactivate(item.id)}
+                      disabled={!item.is_active}
+                    >
+                      <Power className="size-4" />
+                      Deactivate
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </div>

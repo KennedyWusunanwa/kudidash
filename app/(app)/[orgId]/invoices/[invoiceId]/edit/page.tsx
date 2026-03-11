@@ -24,7 +24,7 @@ export default async function EditInvoicePage({
     listInventoryItems(orgId),
     getOrganizationById(orgId),
   ]);
-  const canManageInvoiceAdmin = roleHasPermission(membership.role, "org.manage");
+  const canManageInvoice = roleHasPermission(membership.role, "sales.manage");
 
   let invoice: Record<string, unknown>;
   try {
@@ -51,26 +51,18 @@ export default async function EditInvoicePage({
   const baseInventoryOptions = (inventoryItems as Array<Record<string, unknown>>)
     .filter((item) => item.is_active !== false)
     .map((item) => ({
-      value: String(item.name ?? ""),
+      id: String(item.id ?? ""),
       label: item.sku ? `${String(item.sku)} - ${String(item.name ?? "")}` : String(item.name ?? ""),
+      name: String(item.name ?? ""),
       revenueAccountId: typeof item.revenue_account_id === "string" ? item.revenue_account_id : null,
       salePrice:
         typeof item.sale_price === "number" ? item.sale_price : Number(item.sale_price ?? 0),
+      availableQuantity:
+        typeof item.quantity_on_hand === "number"
+          ? item.quantity_on_hand
+          : Number(item.quantity_on_hand ?? 0),
     }))
-    .filter((item) => item.value);
-
-  const existingLineDescriptions = invoiceLineRows
-    .map((line) => String(line.description ?? "").trim())
-    .filter(Boolean);
-  const existingValues = new Set(baseInventoryOptions.map((item) => item.value));
-  const editLineOnlyOptions = existingLineDescriptions
-    .filter((value) => !existingValues.has(value))
-    .map((value) => ({
-      value,
-      label: `${value} (existing line)`,
-      revenueAccountId: null,
-      salePrice: null,
-    }));
+    .filter((item) => item.id);
 
   return (
     <div className="space-y-6">
@@ -89,14 +81,14 @@ export default async function EditInvoicePage({
         </div>
       </div>
 
-      {!canManageInvoiceAdmin ? (
+      {!canManageInvoice ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Admin only</CardTitle>
+            <CardTitle className="text-base">Sales access required</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Only organization `owner` and `admin` roles can edit or delete invoices.
+              Only users with `sales.manage` can edit draft or approved invoices.
             </p>
           </CardContent>
         </Card>
@@ -142,28 +134,46 @@ export default async function EditInvoicePage({
             description: typeof c.description === "string" ? c.description : "",
           }))}
           revenueAccounts={revenueAccounts}
-          inventoryItems={[...baseInventoryOptions, ...editLineOnlyOptions]}
+          inventoryItems={baseInventoryOptions}
           initialValues={{
             customer_id: String(invoice.customer_id ?? selectedCustomer?.id ?? customers[0]?.id ?? ""),
             customer_name:
-              typeof selectedCustomer?.name === "string"
-                ? selectedCustomer.name
-                : String(invoice.customer_name ?? selectedCustomer?.label ?? ""),
+              typeof invoice.customer_name === "string"
+                ? invoice.customer_name
+                : typeof selectedCustomer?.name === "string"
+                  ? selectedCustomer.name
+                  : String(selectedCustomer?.label ?? ""),
             customer_email:
-              typeof selectedCustomer?.email === "string" ? selectedCustomer.email : "",
+              typeof invoice.customer_email === "string"
+                ? invoice.customer_email
+                : typeof selectedCustomer?.email === "string"
+                  ? selectedCustomer.email
+                  : "",
             customer_phone:
-              typeof selectedCustomer?.phone === "string" ? selectedCustomer.phone : "",
+              typeof invoice.customer_phone === "string"
+                ? invoice.customer_phone
+                : typeof selectedCustomer?.phone === "string"
+                  ? selectedCustomer.phone
+                  : "",
             customer_billing_address:
-              typeof selectedCustomer?.billing_address === "string"
-                ? selectedCustomer.billing_address
-                : "",
+              typeof invoice.customer_billing_address === "string"
+                ? invoice.customer_billing_address
+                : typeof selectedCustomer?.billing_address === "string"
+                  ? selectedCustomer.billing_address
+                  : "",
             customer_description:
-              typeof selectedCustomer?.description === "string" ? selectedCustomer.description : "",
+              typeof invoice.customer_description === "string"
+                ? invoice.customer_description
+                : typeof selectedCustomer?.description === "string"
+                  ? selectedCustomer.description
+                  : "",
             invoice_date:
               typeof invoice.invoice_date === "string" ? invoice.invoice_date.slice(0, 10) : null,
             due_date: typeof invoice.due_date === "string" ? invoice.due_date.slice(0, 10) : null,
             notes: typeof invoice.notes === "string" ? invoice.notes : "",
             lines: invoiceLineRows.map((line) => ({
+              inventory_item_id:
+                typeof line.inventory_item_id === "string" ? line.inventory_item_id : "",
               description: String(line.description ?? ""),
               quantity: Number(line.quantity ?? 1),
               unit_price: Number(line.unit_price ?? 0),

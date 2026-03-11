@@ -33,6 +33,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const today = new Date().toISOString().slice(0, 10);
+const NONE = "__none__";
 
 interface CustomerOption {
   id: string;
@@ -50,10 +51,12 @@ interface Option {
 }
 
 interface InventoryItemOption {
-  value: string;
+  id: string;
   label: string;
+  name: string;
   revenueAccountId?: string | null;
   salePrice?: number | null;
+  availableQuantity?: number | null;
 }
 
 interface InvoiceFormInitialValues {
@@ -67,6 +70,7 @@ interface InvoiceFormInitialValues {
   due_date?: string | null;
   notes?: string | null;
   lines?: Array<{
+    inventory_item_id?: string | null;
     description: string;
     quantity: number;
     unit_price: number;
@@ -116,6 +120,7 @@ export function InvoiceForm({
         initialValues?.lines?.length
           ? initialValues.lines.map((line) => ({
               description: line.description ?? "",
+              inventory_item_id: line.inventory_item_id ?? "",
               quantity: Number(line.quantity ?? 1),
               unit_price: Number(line.unit_price ?? 0),
               revenue_account_id: line.revenue_account_id ?? (revenueAccounts[0]?.id ?? ""),
@@ -123,6 +128,7 @@ export function InvoiceForm({
             }))
           : [
               {
+                inventory_item_id: "",
                 description: "",
                 quantity: 1,
                 unit_price: 0,
@@ -142,7 +148,7 @@ export function InvoiceForm({
     [customers]
   );
   const inventoryItemsByValue = useMemo(
-    () => new Map(inventoryItems.map((item) => [item.value, item])),
+    () => new Map(inventoryItems.map((item) => [item.id, item])),
     [inventoryItems]
   );
 
@@ -400,6 +406,7 @@ export function InvoiceForm({
                   variant="outline"
                   onClick={() =>
                     append({
+                      inventory_item_id: "",
                       description: "",
                       quantity: 1,
                       unit_price: 0,
@@ -416,56 +423,88 @@ export function InvoiceForm({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid gap-3 rounded-lg border p-3 md:grid-cols-[2fr_1fr_1fr_1.5fr_1fr_auto]"
+                  className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1.4fr_1.8fr_0.9fr_1fr_1.4fr_1fr_auto]"
                 >
+                  <FormField
+                    control={form.control}
+                    name={`lines.${index}.inventory_item_id`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="md:sr-only">Product</FormLabel>
+                        <Select
+                          value={field.value || NONE}
+                          onValueChange={(value) => {
+                            const nextValue = value === NONE ? "" : value;
+                            field.onChange(nextValue);
+                            if (!nextValue) {
+                              return;
+                            }
+
+                            const selectedItem = inventoryItemsByValue.get(nextValue);
+                            if (!selectedItem) {
+                              return;
+                            }
+
+                            form.setValue(`lines.${index}.description`, selectedItem.name, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                            if (selectedItem.revenueAccountId) {
+                              form.setValue(
+                                `lines.${index}.revenue_account_id`,
+                                selectedItem.revenueAccountId,
+                                {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                }
+                              );
+                            }
+                            if (selectedItem.salePrice != null) {
+                              form.setValue(`lines.${index}.unit_price`, Number(selectedItem.salePrice), {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select product/item" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={NONE}>Custom line</SelectItem>
+                            {inventoryItems.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name={`lines.${index}.description`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="md:sr-only">Description</FormLabel>
-                        {inventoryItems.length ? (
-                          <Select
-                            value={field.value ?? ""}
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              const selectedItem = inventoryItemsByValue.get(value);
-                              if (selectedItem?.revenueAccountId) {
-                                form.setValue(
-                                  `lines.${index}.revenue_account_id`,
-                                  selectedItem.revenueAccountId,
-                                  {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  }
-                                );
-                              }
-                              if (selectedItem && selectedItem.salePrice != null) {
-                                form.setValue(`lines.${index}.unit_price`, Number(selectedItem.salePrice), {
-                                  shouldDirty: true,
-                                  shouldValidate: true,
-                                });
-                              }
-                            }}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select product/item" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {inventoryItems.map((item) => (
-                                <SelectItem key={`${item.label}-${item.value}`} value={item.value}>
-                                  {item.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <FormControl>
-                            <Input placeholder="Service description" {...(field as any)} />
-                          </FormControl>
-                        )}
+                        <FormControl>
+                          <Input placeholder="Service or product description" {...(field as any)} />
+                        </FormControl>
+                        {(() => {
+                          const selectedItemId = form.getValues(`lines.${index}.inventory_item_id`) || "";
+                          const selectedItem = selectedItemId
+                            ? inventoryItemsByValue.get(selectedItemId)
+                            : null;
+                          return selectedItem?.availableQuantity != null ? (
+                            <p className="text-xs text-muted-foreground">
+                              Available stock: {selectedItem.availableQuantity}
+                            </p>
+                          ) : null;
+                        })()}
                         <FormMessage />
                       </FormItem>
                     )}

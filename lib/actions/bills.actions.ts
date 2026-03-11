@@ -23,6 +23,16 @@ export async function createDraftBillAction(
       return { success: true, data: { billId: crypto.randomUUID() } };
     }
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "purchases.manage");
+    const { data: orgRow, error: orgError } = await supabase
+      .from("organizations")
+      .select("base_currency")
+      .eq("id", parsed.orgId)
+      .single();
+    if (orgError) throw orgError;
+    const orgBaseCurrency =
+      typeof orgRow?.base_currency === "string" && orgRow.base_currency.trim()
+        ? orgRow.base_currency.trim().toUpperCase()
+        : parsed.currency_code.toUpperCase();
 
     const subtotal = Number(
       parsed.lines.reduce((sum, line) => sum + line.quantity * line.unit_cost, 0).toFixed(2)
@@ -39,7 +49,7 @@ export async function createDraftBillAction(
         vendor_id: parsed.vendor_id,
         bill_date: parsed.bill_date,
         due_date: parsed.due_date,
-        currency_code: parsed.currency_code.toUpperCase(),
+        currency_code: orgBaseCurrency,
         notes: parsed.notes || null,
         subtotal,
         tax_total,
@@ -57,6 +67,7 @@ export async function createDraftBillAction(
       description: line.description,
       quantity: line.quantity,
       unit_cost: line.unit_cost,
+      inventory_item_id: line.inventory_item_id || null,
       expense_account_id: line.expense_account_id,
       tax_amount: line.tax_amount ?? 0,
       line_total: Number((line.quantity * line.unit_cost + (line.tax_amount ?? 0)).toFixed(2)),

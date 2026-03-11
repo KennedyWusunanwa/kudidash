@@ -52,6 +52,7 @@ export async function createDraftInvoiceAction(
     };
 
     let customerId: string;
+    let customerTaxId: string | null = null;
     if (parsed.customer_id === "__new__") {
       const { data: createdCustomer, error: customerError } = await supabase
         .from("customers")
@@ -59,20 +60,23 @@ export async function createDraftInvoiceAction(
           org_id: parsed.orgId,
           ...customerPayload,
         })
-        .select("id")
+        .select("id, tax_id")
         .single();
       if (customerError) throw customerError;
       customerId = String(createdCustomer.id);
+      customerTaxId =
+        typeof createdCustomer.tax_id === "string" ? createdCustomer.tax_id : null;
     } else {
-      const { data: updatedCustomer, error: customerError } = await supabase
+      const { data: existingCustomer, error: customerError } = await supabase
         .from("customers")
-        .update(customerPayload)
+        .select("id, tax_id")
         .eq("org_id", parsed.orgId)
         .eq("id", parsed.customer_id)
-        .select("id")
         .single();
       if (customerError) throw customerError;
-      customerId = String(updatedCustomer.id);
+      customerId = String(existingCustomer.id);
+      customerTaxId =
+        typeof existingCustomer.tax_id === "string" ? existingCustomer.tax_id : null;
     }
 
     const subtotal = Number(
@@ -88,6 +92,12 @@ export async function createDraftInvoiceAction(
       .insert({
         org_id: parsed.orgId,
         customer_id: customerId,
+        customer_name: parsed.customer_name,
+        customer_email: parsed.customer_email || null,
+        customer_phone: parsed.customer_phone || null,
+        customer_billing_address: parsed.customer_billing_address || null,
+        customer_tax_id: customerTaxId,
+        customer_description: parsed.customer_description || null,
         invoice_date: parsed.invoice_date,
         due_date: parsed.due_date,
         currency_code: orgBaseCurrency,
@@ -108,6 +118,7 @@ export async function createDraftInvoiceAction(
       description: line.description,
       quantity: line.quantity,
       unit_price: line.unit_price,
+      inventory_item_id: line.inventory_item_id || null,
       revenue_account_id: line.revenue_account_id,
       tax_amount: line.tax_amount ?? 0,
       line_total: Number((line.quantity * line.unit_price + (line.tax_amount ?? 0)).toFixed(2)),
@@ -140,7 +151,7 @@ export async function updateDraftInvoiceAction(
       return { success: true };
     }
 
-    const supabase = await getServerSupabaseForOrg(parsed.orgId, "org.manage");
+    const supabase = await getServerSupabaseForOrg(parsed.orgId, "sales.manage");
 
     const { data: existingInvoice, error: existingInvoiceError } = await supabase
       .from("invoices")
@@ -179,6 +190,7 @@ export async function updateDraftInvoiceAction(
     };
 
     let customerId: string;
+    let customerTaxId: string | null = null;
     if (parsed.customer_id === "__new__") {
       const { data: createdCustomer, error: customerError } = await supabase
         .from("customers")
@@ -186,20 +198,23 @@ export async function updateDraftInvoiceAction(
           org_id: parsed.orgId,
           ...customerPayload,
         })
-        .select("id")
+        .select("id, tax_id")
         .single();
       if (customerError) throw customerError;
       customerId = String(createdCustomer.id);
+      customerTaxId =
+        typeof createdCustomer.tax_id === "string" ? createdCustomer.tax_id : null;
     } else {
-      const { data: updatedCustomer, error: customerError } = await supabase
+      const { data: existingCustomer, error: customerError } = await supabase
         .from("customers")
-        .update(customerPayload)
+        .select("id, tax_id")
         .eq("org_id", parsed.orgId)
         .eq("id", parsed.customer_id)
-        .select("id")
         .single();
       if (customerError) throw customerError;
-      customerId = String(updatedCustomer.id);
+      customerId = String(existingCustomer.id);
+      customerTaxId =
+        typeof existingCustomer.tax_id === "string" ? existingCustomer.tax_id : null;
     }
 
     const subtotal = Number(
@@ -224,6 +239,7 @@ export async function updateDraftInvoiceAction(
       description: line.description,
       quantity: line.quantity,
       unit_price: line.unit_price,
+      inventory_item_id: line.inventory_item_id || null,
       revenue_account_id: line.revenue_account_id,
       tax_amount: line.tax_amount ?? 0,
       line_total: Number((line.quantity * line.unit_price + (line.tax_amount ?? 0)).toFixed(2)),
@@ -235,6 +251,12 @@ export async function updateDraftInvoiceAction(
       .from("invoices")
       .update({
         customer_id: customerId,
+        customer_name: parsed.customer_name,
+        customer_email: parsed.customer_email || null,
+        customer_phone: parsed.customer_phone || null,
+        customer_billing_address: parsed.customer_billing_address || null,
+        customer_tax_id: customerTaxId,
+        customer_description: parsed.customer_description || null,
         invoice_date: parsed.invoice_date,
         due_date: parsed.due_date,
         currency_code: orgBaseCurrency,

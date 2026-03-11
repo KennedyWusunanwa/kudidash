@@ -6,7 +6,10 @@ const money = z
   .min(0)
   .transform((n) => Number(n.toFixed(2)));
 
+const optionalUuidString = z.union([z.string().uuid(), z.literal("")]).default("");
+
 export const invoiceLineSchema = z.object({
+  inventory_item_id: optionalUuidString.optional(),
   description: z.string().trim().min(1).max(255),
   quantity: z.coerce.number().positive(),
   unit_price: money,

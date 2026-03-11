@@ -35,7 +35,13 @@ export async function listInvoices(orgId: string) {
 
 export async function getInvoice(orgId: string, invoiceId: string) {
   if (isDemoMode()) {
-    return { ...getDemoInvoice(invoiceId), org_id: orgId };
+    return {
+      ...getDemoInvoice(invoiceId),
+      org_id: orgId,
+      amount_paid: 0,
+      paid_at: null,
+      public_view_token: invoiceId,
+    };
   }
 
   const supabase = createSupabaseServerClient();

@@ -27,7 +27,7 @@ export default async function InventoryItemEditPage({
     listAccountsForSelect(orgId),
     requireOrgMembership(orgId),
   ]);
-  const canManageAdmin = roleHasPermission(membership.role, "org.manage");
+  const canManageInventory = roleHasPermission(membership.role, "inventory.manage");
 
   return (
     <div className="space-y-6">
@@ -46,7 +46,7 @@ export default async function InventoryItemEditPage({
         </div>
       </div>
 
-      {canManageAdmin ? (
+      {canManageInventory ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -64,6 +64,7 @@ export default async function InventoryItemEditPage({
                 name: String(item.name ?? ""),
                 sale_price: Number(item.sale_price ?? 0),
                 purchase_price: Number(item.purchase_price ?? 0),
+                quantity_on_hand: Number(item.quantity_on_hand ?? 0),
                 inventory_account_id:
                   typeof item.inventory_account_id === "string" ? item.inventory_account_id : "",
                 cogs_account_id: typeof item.cogs_account_id === "string" ? item.cogs_account_id : "",
@@ -87,7 +88,7 @@ export default async function InventoryItemEditPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Only organization `owner` and `admin` roles can edit or delete inventory items.
+              Only users with `inventory.manage` can adjust stock items.
             </p>
           </CardContent>
         </Card>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { startTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { postBillAction } from "@/lib/actions/bills.actions";
@@ -31,11 +32,15 @@ export function BillsTable({
   orgId,
   bills,
   currencyCode,
+  canManagePurchases = false,
 }: {
   orgId: string;
   bills: BillRow[];
   currencyCode?: string | null;
+  canManagePurchases?: boolean;
 }) {
+  const router = useRouter();
+
   return (
     <div className="rounded-lg border">
       <Table>
@@ -74,7 +79,7 @@ export function BillsTable({
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {bill.status === "draft" || bill.status === "approved" ? (
+                  {canManagePurchases && (bill.status === "draft" || bill.status === "approved") ? (
                     <Button
                       type="button"
                       size="sm"
@@ -86,6 +91,7 @@ export function BillsTable({
                             return;
                           }
                           toast.success("Bill posted.");
+                          router.refresh();
                         })
                       }
                     >

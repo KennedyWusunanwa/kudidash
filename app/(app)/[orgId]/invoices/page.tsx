@@ -14,6 +14,7 @@ export default async function InvoicesPage({
 }) {
   const { orgId } = await params;
   const [invoices, membership] = await Promise.all([listInvoices(orgId), requireOrgMembership(orgId)]);
+  const canManageSales = roleHasPermission(membership.role, "sales.manage");
   const canManageInvoiceAdmin = roleHasPermission(membership.role, "org.manage");
 
   return (
@@ -25,12 +26,14 @@ export default async function InvoicesPage({
             Posting an invoice creates AR + revenue journal entries via database RPC.
           </p>
         </div>
-        <Button asChild>
-          <Link href={`/${orgId}/invoices/new`}>
-            <PlusCircle className="size-4" />
-            New invoice
-          </Link>
-        </Button>
+        {canManageSales ? (
+          <Button asChild>
+            <Link href={`/${orgId}/invoices/new`}>
+              <PlusCircle className="size-4" />
+              New invoice
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <Card>
@@ -52,7 +55,12 @@ export default async function InvoicesPage({
           <CardTitle className="text-base">Invoice register</CardTitle>
         </CardHeader>
         <CardContent>
-          <InvoicesTable orgId={orgId} invoices={invoices as never[]} canManageAdmin={canManageInvoiceAdmin} />
+          <InvoicesTable
+            orgId={orgId}
+            invoices={invoices as never[]}
+            canManageSales={canManageSales}
+            canManageAdmin={canManageInvoiceAdmin}
+          />
         </CardContent>
       </Card>
     </div>

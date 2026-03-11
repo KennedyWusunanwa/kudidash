@@ -111,7 +111,7 @@ export function AuthSignInForm() {
               }
               setLoadingMagicLink(true);
               const supabase = createSupabaseBrowserClient();
-              const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(
+              const baseUrl = (window.location.origin || process.env.NEXT_PUBLIC_SITE_URL || "").replace(
                 /\/+$/,
                 ""
               );

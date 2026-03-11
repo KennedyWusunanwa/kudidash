@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getDashboardKpis, getRevenueExpenseSeries } from "@/lib/data/reports.data";
 import { listBillsToApprove } from "@/lib/data/bills.data";
+import { listInventoryItems } from "@/lib/data/inventory.data";
 import { listRecentInvoices } from "@/lib/data/invoices.data";
 import { listPendingJournals } from "@/lib/data/journals.data";
 import { getOrganizationById } from "@/lib/data/org.data";
@@ -18,13 +19,14 @@ export default async function DashboardPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [kpis, series, recentInvoices, billsToApprove, pendingJournals, org] = await Promise.all([
+  const [kpis, series, recentInvoices, billsToApprove, pendingJournals, org, inventoryItems] = await Promise.all([
     getDashboardKpis(orgId),
     getRevenueExpenseSeries(orgId),
     listRecentInvoices(orgId),
     listBillsToApprove(orgId),
     listPendingJournals(orgId),
     getOrganizationById(orgId),
+    listInventoryItems(orgId),
   ]);
   const dashboardCurrency =
     typeof org?.base_currency === "string" && org.base_currency.trim()
@@ -40,6 +42,10 @@ export default async function DashboardPage({
     revenue: Number(row.revenue ?? 0),
     expenses: Number(row.expenses ?? 0),
   }));
+  const inventoryValue = (inventoryItems as Array<Record<string, unknown>>).reduce(
+    (sum, item) => sum + Number(item.stock_value ?? 0),
+    0
+  );
 
   return (
     <div className="space-y-6">
@@ -55,7 +61,7 @@ export default async function DashboardPage({
         </CardContent>
       </Card>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <KpiCard
           title="Cash"
           value={Number(kpis.cash ?? 0)}
@@ -84,6 +90,12 @@ export default async function DashboardPage({
           title="AP"
           value={Number(kpis.ap ?? 0)}
           description="Control account balance"
+          currency={dashboardCurrency}
+        />
+        <KpiCard
+          title="Inventory"
+          value={inventoryValue}
+          description="On-hand stock valued at current purchase price"
           currency={dashboardCurrency}
         />
       </section>

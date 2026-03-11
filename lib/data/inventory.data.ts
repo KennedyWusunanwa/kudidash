@@ -9,6 +9,7 @@ const demoInventoryItems = [
     name: "A4 Printing Paper Pack",
     sale_price: 32.5,
     purchase_price: 24,
+    quantity_on_hand: 180,
     valuation_method: "weighted_average",
     is_active: true,
     inventory_account_id: null,
@@ -24,6 +25,7 @@ const demoInventoryItems = [
     name: "Field Service Starter Kit",
     sale_price: 180,
     purchase_price: 120,
+    quantity_on_hand: 42,
     valuation_method: "fifo",
     is_active: true,
     inventory_account_id: null,
@@ -36,7 +38,11 @@ const demoInventoryItems = [
 
 export async function listInventoryItems(orgId: string) {
   if (isDemoMode()) {
-    return demoInventoryItems.map((row) => ({ ...row, org_id: orgId }));
+    return demoInventoryItems.map((row) => ({
+      ...row,
+      org_id: orgId,
+      stock_value: Number((Number(row.quantity_on_hand ?? 0) * Number(row.purchase_price ?? 0)).toFixed(2)),
+    }));
   }
 
   const supabase = createSupabaseServerClient();
@@ -49,7 +55,12 @@ export async function listInventoryItems(orgId: string) {
     .order("sku", { ascending: true });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row) => ({
+    ...row,
+    stock_value: Number(
+      (Number((row as Record<string, unknown>).quantity_on_hand ?? 0) * Number((row as Record<string, unknown>).purchase_price ?? 0)).toFixed(2)
+    ),
+  }));
 }
 
 export async function getInventoryItem(orgId: string, itemId: string) {

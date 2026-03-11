@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isDemoMode } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/auth/callback"];
+const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/auth/callback", "/public"];
 
 export async function middleware(req: NextRequest) {
   if (isDemoMode()) {

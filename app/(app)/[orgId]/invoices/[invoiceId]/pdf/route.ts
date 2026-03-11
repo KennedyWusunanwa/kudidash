@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getInvoice, listCustomers } from "@/lib/data/invoices.data";
+import { getInvoice } from "@/lib/data/invoices.data";
 import { getOrganizationById } from "@/lib/data/org.data";
 import { buildInvoicePdf } from "@/lib/pdf/invoice-pdf";
 
@@ -17,18 +17,10 @@ export async function GET(
   const { orgId, invoiceId } = await context.params;
 
   try {
-    const [invoiceRaw, orgRaw, customers] = await Promise.all([
-      getInvoice(orgId, invoiceId),
-      getOrganizationById(orgId),
-      listCustomers(orgId),
-    ]);
+    const [invoiceRaw, orgRaw] = await Promise.all([getInvoice(orgId, invoiceId), getOrganizationById(orgId)]);
 
     const invoice = invoiceRaw as Record<string, unknown>;
     const org = (orgRaw ?? {}) as Record<string, unknown>;
-    const customerId = typeof invoice.customer_id === "string" ? invoice.customer_id : null;
-    const customer =
-      customers.find((row) => String((row as Record<string, unknown>).id) === customerId) ?? null;
-
     const lines = Array.isArray(invoice.invoice_lines)
       ? (invoice.invoice_lines as Array<Record<string, unknown>>).map((line) => ({
           id: typeof line.id === "string" ? line.id : undefined,
@@ -47,8 +39,7 @@ export async function GET(
         id: String(org.id ?? orgId),
         name: typeof org.name === "string" ? org.name : "Organization",
         slug: typeof org.slug === "string" ? org.slug : undefined,
-        base_currency:
-          typeof org.base_currency === "string" ? org.base_currency : undefined,
+        base_currency: typeof org.base_currency === "string" ? org.base_currency : undefined,
         dashboard_logo_url:
           typeof org.dashboard_logo_url === "string" ? org.dashboard_logo_url : undefined,
         invoice_company_name:
@@ -64,18 +55,17 @@ export async function GET(
         invoice_logo_url:
           typeof org.invoice_logo_url === "string" ? org.invoice_logo_url : undefined,
       },
-      customer: customer
-        ? {
-            id: String((customer as Record<string, unknown>).id ?? ""),
-            name: ((customer as Record<string, unknown>).name as string | undefined) ?? null,
-            email: ((customer as Record<string, unknown>).email as string | undefined) ?? null,
-            phone: ((customer as Record<string, unknown>).phone as string | undefined) ?? null,
-            billing_address:
-              ((customer as Record<string, unknown>).billing_address as string | undefined) ??
-              null,
-            tax_id: ((customer as Record<string, unknown>).tax_id as string | undefined) ?? null,
-          }
-        : null,
+      customer: {
+        id: typeof invoice.customer_id === "string" ? invoice.customer_id : "",
+        name: typeof invoice.customer_name === "string" ? invoice.customer_name : null,
+        email: typeof invoice.customer_email === "string" ? invoice.customer_email : null,
+        phone: typeof invoice.customer_phone === "string" ? invoice.customer_phone : null,
+        billing_address:
+          typeof invoice.customer_billing_address === "string"
+            ? invoice.customer_billing_address
+            : null,
+        tax_id: typeof invoice.customer_tax_id === "string" ? invoice.customer_tax_id : null,
+      },
       invoice: {
         id: String(invoice.id ?? invoiceId),
         invoice_no: (invoice.invoice_no as string | null | undefined) ?? null,
@@ -93,7 +83,8 @@ export async function GET(
     });
 
     const invoiceNo =
-      ((invoice.invoice_no as string | null | undefined) ?? `invoice-${String(invoice.id ?? invoiceId).slice(0, 8)}`);
+      (invoice.invoice_no as string | null | undefined) ??
+      `invoice-${String(invoice.id ?? invoiceId).slice(0, 8)}`;
     const filename = `${safeFileNamePart(invoiceNo)}.pdf`;
 
     return new NextResponse(pdfBytes as BodyInit, {

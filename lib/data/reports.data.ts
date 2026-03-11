@@ -51,11 +51,20 @@ function buildCustomerTransactionRows(params: {
       tax_total: Number(invoice.tax_total ?? 0),
       reference: null,
       customer_id: customerId,
-      customer_name: customer?.name ?? "",
-      customer_email: customer?.email ?? "",
-      customer_phone: customer?.phone ?? "",
-      customer_billing_address: customer?.billing_address ?? "",
-      customer_description: customer?.description ?? "",
+      customer_name:
+        typeof invoice.customer_name === "string" ? invoice.customer_name : customer?.name ?? "",
+      customer_email:
+        typeof invoice.customer_email === "string" ? invoice.customer_email : customer?.email ?? "",
+      customer_phone:
+        typeof invoice.customer_phone === "string" ? invoice.customer_phone : customer?.phone ?? "",
+      customer_billing_address:
+        typeof invoice.customer_billing_address === "string"
+          ? invoice.customer_billing_address
+          : customer?.billing_address ?? "",
+      customer_description:
+        typeof invoice.customer_description === "string"
+          ? invoice.customer_description
+          : customer?.description ?? "",
     };
   });
 
@@ -75,8 +84,10 @@ function buildCustomerTransactionRows(params: {
       tax_total: null,
       reference: String(receipt.reference ?? ""),
       customer_id: customerId,
-      customer_name: customer?.name ?? "",
-      customer_email: customer?.email ?? "",
+      customer_name:
+        typeof receipt.customer_name === "string" ? receipt.customer_name : customer?.name ?? "",
+      customer_email:
+        typeof receipt.customer_email === "string" ? receipt.customer_email : customer?.email ?? "",
       customer_phone: customer?.phone ?? "",
       customer_billing_address: customer?.billing_address ?? "",
       customer_description: customer?.description ?? "",
@@ -258,7 +269,7 @@ export async function getCustomerTransactionRows(
     supabase
       .from("invoices")
       .select(
-        "id, customer_id, invoice_no, invoice_date, due_date, status, currency_code, subtotal, tax_total, total"
+        "id, customer_id, customer_name, customer_email, customer_phone, customer_billing_address, customer_description, invoice_no, invoice_date, due_date, status, currency_code, subtotal, tax_total, total"
       )
       .eq("org_id", orgId)
       .gte("invoice_date", startDate)
@@ -266,7 +277,9 @@ export async function getCustomerTransactionRows(
       .order("invoice_date", { ascending: false }),
     supabase
       .from("receipts")
-      .select("id, customer_id, receipt_no, receipt_date, status, currency_code, amount, reference")
+      .select(
+        "id, customer_id, customer_name, customer_email, receipt_no, receipt_date, status, currency_code, amount, reference"
+      )
       .eq("org_id", orgId)
       .gte("receipt_date", startDate)
       .lte("receipt_date", endDate)

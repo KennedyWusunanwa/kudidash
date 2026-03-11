@@ -30,6 +30,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const today = new Date().toISOString().slice(0, 10);
+const NONE = "__none__";
 
 interface Option {
   id: string;
@@ -37,10 +38,12 @@ interface Option {
 }
 
 interface InventoryItemOption {
-  value: string;
+  id: string;
   label: string;
+  name: string;
   expenseAccountId?: string | null;
   purchasePrice?: number | null;
+  availableQuantity?: number | null;
 }
 
 export function BillForm({
@@ -48,24 +51,29 @@ export function BillForm({
   vendors,
   expenseAccounts,
   inventoryItems = [],
+  defaultCurrencyCode,
 }: {
   orgId: string;
   vendors: Option[];
   expenseAccounts: Option[];
   inventoryItems?: InventoryItemOption[];
+  defaultCurrencyCode?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const lockedCurrencyCode =
+    (defaultCurrencyCode || DEFAULT_CURRENCY_CODE).trim().toUpperCase() || DEFAULT_CURRENCY_CODE;
   const form = useForm({
     resolver: zodResolver(billSchema),
     defaultValues: {
       vendor_id: vendors[0]?.id ?? "",
       bill_date: today,
       due_date: today,
-      currency_code: DEFAULT_CURRENCY_CODE,
+      currency_code: lockedCurrencyCode,
       notes: "",
       lines: [
         {
+          inventory_item_id: "",
           description: "",
           quantity: 1,
           unit_cost: 0,
@@ -79,7 +87,7 @@ export function BillForm({
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "lines" });
   const lines = useWatch({ control: form.control, name: "lines" });
   const inventoryItemsByValue = useMemo(
-    () => new Map(inventoryItems.map((item) => [item.value, item])),
+    () => new Map(inventoryItems.map((item) => [item.id, item])),
     [inventoryItems]
   );
   const totals = useMemo(() => {
@@ -148,7 +156,7 @@ export function BillForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select currency" />
@@ -162,6 +170,9 @@ export function BillForm({
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Bills are recorded in the organization base currency.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -202,6 +213,7 @@ export function BillForm({
                   variant="outline"
                   onClick={() =>
                     append({
+                      inventory_item_id: "",
                       description: "",
                       quantity: 1,
                       unit_cost: 0,
@@ -218,60 +230,93 @@ export function BillForm({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid gap-3 rounded-lg border p-3 md:grid-cols-[2fr_1fr_1fr_1.5fr_1fr_auto]"
+                  className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1.4fr_1.8fr_0.9fr_1fr_1.5fr_1fr_auto]"
                 >
+                  <FormField
+                    control={form.control}
+                    name={`lines.${index}.inventory_item_id`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="md:sr-only">Product</FormLabel>
+                        <Select
+                          value={field.value || NONE}
+                          onValueChange={(value) => {
+                            const nextValue = value === NONE ? "" : value;
+                            field.onChange(nextValue);
+                            if (!nextValue) {
+                              return;
+                            }
+
+                            const selectedItem = inventoryItemsByValue.get(nextValue);
+                            if (!selectedItem) {
+                              return;
+                            }
+
+                            form.setValue(`lines.${index}.description`, selectedItem.name, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                            if (selectedItem.expenseAccountId) {
+                              form.setValue(
+                                `lines.${index}.expense_account_id`,
+                                selectedItem.expenseAccountId,
+                                {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                }
+                              );
+                            }
+                            if (selectedItem.purchasePrice != null) {
+                              form.setValue(
+                                `lines.${index}.unit_cost`,
+                                Number(selectedItem.purchasePrice),
+                                {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                }
+                              );
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select product/item" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={NONE}>Custom line</SelectItem>
+                            {inventoryItems.map((item) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name={`lines.${index}.description`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="md:sr-only">Description</FormLabel>
-                        {inventoryItems.length ? (
-                          <Select
-                            value={field.value ?? ""}
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              const selectedItem = inventoryItemsByValue.get(value);
-                              if (selectedItem?.expenseAccountId) {
-                                form.setValue(
-                                  `lines.${index}.expense_account_id`,
-                                  selectedItem.expenseAccountId,
-                                  {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  }
-                                );
-                              }
-                              if (selectedItem && selectedItem.purchasePrice != null) {
-                                form.setValue(
-                                  `lines.${index}.unit_cost`,
-                                  Number(selectedItem.purchasePrice),
-                                  {
-                                    shouldDirty: true,
-                                    shouldValidate: true,
-                                  }
-                                );
-                              }
-                            }}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select product/item" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {inventoryItems.map((item) => (
-                                <SelectItem key={`${item.label}-${item.value}`} value={item.value}>
-                                  {item.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <FormControl>
-                            <Input placeholder="Expense description" {...(field as any)} />
-                          </FormControl>
-                        )}
+                        <FormControl>
+                          <Input placeholder="Expense or stock item description" {...(field as any)} />
+                        </FormControl>
+                        {(() => {
+                          const selectedItemId =
+                            form.getValues(`lines.${index}.inventory_item_id`) || "";
+                          const selectedItem = selectedItemId
+                            ? inventoryItemsByValue.get(selectedItemId)
+                            : null;
+                          return selectedItem?.availableQuantity != null ? (
+                            <p className="text-xs text-muted-foreground">
+                              Current stock: {selectedItem.availableQuantity}
+                            </p>
+                          ) : null;
+                        })()}
                         <FormMessage />
                       </FormItem>
                     )}

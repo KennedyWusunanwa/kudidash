@@ -2,7 +2,8 @@ import Link from "next/link";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listCustomers } from "@/lib/data/invoices.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
-import { getOrganizationById } from "@/lib/data/org.data";
+import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
+import { roleHasPermission } from "@/lib/permissions";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,12 +14,14 @@ export default async function NewInvoicePage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [customers, accounts, inventoryItems, org] = await Promise.all([
+  const [customers, accounts, inventoryItems, org, membership] = await Promise.all([
     listCustomers(orgId),
     listAccountsForSelect(orgId),
     listInventoryItems(orgId),
     getOrganizationById(orgId),
+    requireOrgMembership(orgId),
   ]);
+  const canManageSales = roleHasPermission(membership.role, "sales.manage");
 
   const revenueAccounts = accounts.filter(
     (account) => account.type === "income" || account.sub_type === "sales"
@@ -33,7 +36,18 @@ export default async function NewInvoicePage({
         </p>
       </div>
 
-      {customers.length ? (
+      {!canManageSales ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sales access required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Only users with `sales.manage` can create invoices.
+            </p>
+          </CardContent>
+        </Card>
+      ) : customers.length ? (
         <InvoiceForm
           orgId={orgId}
           defaultCurrencyCode={
@@ -54,18 +68,23 @@ export default async function NewInvoicePage({
           inventoryItems={(inventoryItems as Array<Record<string, unknown>>)
             .filter((item) => item.is_active !== false)
             .map((item) => ({
-              value: String(item.name ?? ""),
+              id: String(item.id ?? ""),
               label: item.sku
                 ? `${String(item.sku)} - ${String(item.name ?? "")}`
                 : String(item.name ?? ""),
+              name: String(item.name ?? ""),
               revenueAccountId:
                 typeof item.revenue_account_id === "string" ? item.revenue_account_id : null,
               salePrice:
                 typeof item.sale_price === "number"
                   ? item.sale_price
                   : Number(item.sale_price ?? 0),
+              availableQuantity:
+                typeof item.quantity_on_hand === "number"
+                  ? item.quantity_on_hand
+                  : Number(item.quantity_on_hand ?? 0),
             }))
-            .filter((item) => item.value)}
+            .filter((item) => item.id)}
         />
       ) : (
         <Card>

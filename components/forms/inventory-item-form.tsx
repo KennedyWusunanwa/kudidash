@@ -51,6 +51,7 @@ export function InventoryItemForm({
     name: string;
     sale_price: number | null;
     purchase_price: number | null;
+    quantity_on_hand: number | null;
     inventory_account_id: string | null;
     cogs_account_id: string | null;
     revenue_account_id: string | null;
@@ -68,6 +69,7 @@ export function InventoryItemForm({
       name: initialValues?.name ?? "",
       sale_price: Number(initialValues?.sale_price ?? 0),
       purchase_price: Number(initialValues?.purchase_price ?? 0),
+      quantity_on_hand: Number(initialValues?.quantity_on_hand ?? 0),
       inventory_account_id: initialValues?.inventory_account_id ?? "",
       cogs_account_id: initialValues?.cogs_account_id ?? "",
       revenue_account_id: initialValues?.revenue_account_id ?? "",
@@ -111,6 +113,7 @@ export function InventoryItemForm({
         name: "",
         sale_price: 0,
         purchase_price: 0,
+        quantity_on_hand: 0,
         inventory_account_id: "",
         cogs_account_id: "",
         revenue_account_id: "",
@@ -199,6 +202,20 @@ export function InventoryItemForm({
                 <FormLabel>Purchase price</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" min="0" {...(field as any)} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="quantity_on_hand"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Quantity on hand</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.0001" min="0" {...(field as any)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

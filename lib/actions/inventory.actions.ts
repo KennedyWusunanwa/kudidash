@@ -32,7 +32,7 @@ export async function createInventoryItemAction(
     const parsed = createInventoryItemInputSchema.parse(input);
 
     if (isDemoMode()) {
-      revalidateOrgPaths(parsed.orgId, ["/inventory"]);
+      revalidateOrgPaths(parsed.orgId, ["/inventory", "/invoices/new", "/bills/new", "/dashboard"]);
       return { success: true, data: { id: crypto.randomUUID() } };
     }
 
@@ -53,7 +53,20 @@ export async function createInventoryItemAction(
       .single();
     if (error) throw error;
 
-    revalidateOrgPaths(orgId, ["/inventory"]);
+    if (rest.quantity_on_hand > 0) {
+      const { error: movementError } = await supabase.from("inventory_movements").insert({
+        org_id: orgId,
+        item_id: data.id,
+        movement_date: new Date().toISOString().slice(0, 10),
+        quantity: rest.quantity_on_hand,
+        unit_cost: rest.purchase_price,
+        source_module: "inventory_setup",
+        source_id: data.id,
+      });
+      if (movementError) throw movementError;
+    }
+
+    revalidateOrgPaths(orgId, ["/inventory", "/invoices/new", "/bills/new", "/dashboard"]);
     return { success: true, data: { id: data.id as string } };
   } catch (error) {
     return { success: false, error: parseActionError(error) };
@@ -67,12 +80,26 @@ export async function updateInventoryItemAction(
     const parsed = updateInventoryItemInputSchema.parse(input);
 
     if (isDemoMode()) {
-      revalidateOrgPaths(parsed.orgId, ["/inventory", `/inventory/${parsed.id}`, "/invoices/new"]);
+      revalidateOrgPaths(parsed.orgId, [
+        "/inventory",
+        `/inventory/${parsed.id}`,
+        "/invoices/new",
+        "/bills/new",
+        "/dashboard",
+      ]);
       return { success: true };
     }
 
-    const supabase = await getServerSupabaseForOrg(parsed.orgId, "org.manage");
+    const supabase = await getServerSupabaseForOrg(parsed.orgId, "inventory.manage");
     const { orgId, id, ...rest } = parsed;
+    const { data: existingItem, error: existingItemError } = await supabase
+      .from("inventory_items")
+      .select("quantity_on_hand")
+      .eq("org_id", orgId)
+      .eq("id", id)
+      .single();
+    if (existingItemError) throw existingItemError;
+
     const payload = {
       ...rest,
       inventory_account_id: rest.inventory_account_id || null,
@@ -87,7 +114,22 @@ export async function updateInventoryItemAction(
       .eq("id", id);
     if (error) throw error;
 
-    revalidateOrgPaths(orgId, ["/inventory", `/inventory/${id}`, "/invoices/new"]);
+    const previousQuantity = Number(existingItem.quantity_on_hand ?? 0);
+    const quantityDelta = Number((rest.quantity_on_hand - previousQuantity).toFixed(4));
+    if (quantityDelta !== 0) {
+      const { error: movementError } = await supabase.from("inventory_movements").insert({
+        org_id: orgId,
+        item_id: id,
+        movement_date: new Date().toISOString().slice(0, 10),
+        quantity: quantityDelta,
+        unit_cost: rest.purchase_price,
+        source_module: "inventory_adjustment",
+        source_id: id,
+      });
+      if (movementError) throw movementError;
+    }
+
+    revalidateOrgPaths(orgId, ["/inventory", `/inventory/${id}`, "/invoices/new", "/bills/new", "/dashboard"]);
     return { success: true };
   } catch (error) {
     return { success: false, error: parseActionError(error) };
@@ -101,7 +143,7 @@ export async function deactivateInventoryItemAction(
     const parsed = deactivateInventoryItemSchema.parse(input);
 
     if (isDemoMode()) {
-      revalidateOrgPaths(parsed.orgId, ["/inventory"]);
+      revalidateOrgPaths(parsed.orgId, ["/inventory", "/invoices/new", "/bills/new", "/dashboard"]);
       return { success: true };
     }
 
@@ -113,7 +155,7 @@ export async function deactivateInventoryItemAction(
       .eq("id", parsed.id);
     if (error) throw error;
 
-    revalidateOrgPaths(parsed.orgId, ["/inventory"]);
+    revalidateOrgPaths(parsed.orgId, ["/inventory", "/invoices/new", "/bills/new", "/dashboard"]);
     return { success: true };
   } catch (error) {
     return { success: false, error: parseActionError(error) };
@@ -127,7 +169,13 @@ export async function deleteInventoryItemAction(
     const parsed = deleteInventoryItemInputSchema.parse(input);
 
     if (isDemoMode()) {
-      revalidateOrgPaths(parsed.orgId, ["/inventory", `/inventory/${parsed.id}`, "/invoices/new"]);
+      revalidateOrgPaths(parsed.orgId, [
+        "/inventory",
+        `/inventory/${parsed.id}`,
+        "/invoices/new",
+        "/bills/new",
+        "/dashboard",
+      ]);
       return { success: true };
     }
 
@@ -139,7 +187,13 @@ export async function deleteInventoryItemAction(
       .eq("id", parsed.id);
     if (error) throw error;
 
-    revalidateOrgPaths(parsed.orgId, ["/inventory", `/inventory/${parsed.id}`, "/invoices/new"]);
+    revalidateOrgPaths(parsed.orgId, [
+      "/inventory",
+      `/inventory/${parsed.id}`,
+      "/invoices/new",
+      "/bills/new",
+      "/dashboard",
+    ]);
     return { success: true };
   } catch (error) {
     return { success: false, error: parseActionError(error) };

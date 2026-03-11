@@ -31,10 +31,12 @@ type InvoiceRow = {
 export function InvoicesTable({
   orgId,
   invoices,
+  canManageSales = false,
   canManageAdmin = false,
 }: {
   orgId: string;
   invoices: InvoiceRow[];
+  canManageSales?: boolean;
   canManageAdmin?: boolean;
 }) {
   const router = useRouter();
@@ -105,7 +107,7 @@ export function InvoicesTable({
                       </a>
                     </Button>
 
-                    {canModifyDraft ? (
+                    {canManageSales && canModifyDraft ? (
                       <Button
                         type="button"
                         size="sm"
@@ -117,6 +119,7 @@ export function InvoicesTable({
                               return;
                             }
                             toast.success("Invoice posted.");
+                            router.refresh();
                           })
                         }
                       >
