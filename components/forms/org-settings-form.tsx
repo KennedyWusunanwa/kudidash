@@ -89,10 +89,12 @@ const accountSettingsSchema = z.object({
   retained_earnings_account_id: z.string().optional(),
   revenue_default_account_id: z.string().optional(),
   expense_default_account_id: z.string().optional(),
+  sales_tax_rate: z.coerce.number().min(0).max(100),
 });
 
 type OrgSettingsInput = z.input<typeof orgSettingsSchema>;
 type AccountSettingsInput = z.input<typeof accountSettingsSchema>;
+type AccountMappingFieldName = Exclude<keyof AccountSettingsInput, "sales_tax_rate">;
 const UNMAPPED_VALUE = "__unmapped__";
 
 export function OrgSettingsForm({
@@ -117,7 +119,16 @@ export function OrgSettingsForm({
     invoice_company_tax_id?: string | null;
     invoice_logo_url?: string | null;
   };
-  accountSettings?: Partial<Record<keyof AccountSettingsInput, string | null>>;
+  accountSettings?: {
+    ar_account_id?: string | null;
+    ap_account_id?: string | null;
+    cash_account_id?: string | null;
+    bank_account_id?: string | null;
+    retained_earnings_account_id?: string | null;
+    revenue_default_account_id?: string | null;
+    expense_default_account_id?: string | null;
+    sales_tax_rate?: number | null;
+  };
   accountOptions: Array<{ id: string; label: string }>;
   canManageOrgSettings: boolean;
 }) {
@@ -156,6 +167,7 @@ export function OrgSettingsForm({
       retained_earnings_account_id: accountSettings?.retained_earnings_account_id ?? "",
       revenue_default_account_id: accountSettings?.revenue_default_account_id ?? "",
       expense_default_account_id: accountSettings?.expense_default_account_id ?? "",
+      sales_tax_rate: Number(accountSettings?.sales_tax_rate ?? 0),
     },
   });
 
@@ -184,6 +196,7 @@ export function OrgSettingsForm({
         retained_earnings_account_id: normalize(parsedInput.retained_earnings_account_id),
         revenue_default_account_id: normalize(parsedInput.revenue_default_account_id),
         expense_default_account_id: normalize(parsedInput.expense_default_account_id),
+        sales_tax_rate: Number(parsedInput.sales_tax_rate ?? 0),
       });
       if (!result.success) {
         toast.error(result.error || "Failed to update account mappings.");
@@ -193,7 +206,7 @@ export function OrgSettingsForm({
     });
   };
 
-  const mapFields: Array<{ name: keyof AccountSettingsInput; label: string }> = [
+  const mapFields: Array<{ name: AccountMappingFieldName; label: string }> = [
     { name: "ar_account_id", label: "Accounts Receivable control" },
     { name: "ap_account_id", label: "Accounts Payable control" },
     { name: "cash_account_id", label: "Cash control" },
@@ -557,6 +570,29 @@ export function OrgSettingsForm({
 
       <Form {...mapForm}>
         <form onSubmit={mapForm.handleSubmit(saveMappings)} className="grid gap-4 md:grid-cols-2">
+          <FormField
+            control={mapForm.control}
+            name="sales_tax_rate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Default sales tax rate (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    {...(field as any)}
+                    disabled={!canManageOrgSettings || isPendingMap}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Applied automatically to new draft invoices and reflected in invoice totals.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           {mapFields.map(({ name, label }) => (
             <FormField
               key={name}
@@ -566,7 +602,7 @@ export function OrgSettingsForm({
                 <FormItem>
                   <FormLabel>{label}</FormLabel>
                   <Select
-                    value={field.value || UNMAPPED_VALUE}
+                    value={(field.value as string | undefined) || UNMAPPED_VALUE}
                     onValueChange={(value) =>
                       field.onChange(value === UNMAPPED_VALUE ? "" : value)
                     }

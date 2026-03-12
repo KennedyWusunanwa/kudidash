@@ -56,6 +56,7 @@ const accountSettingsSchema = z.object({
   retained_earnings_account_id: z.string().uuid().nullable().optional(),
   revenue_default_account_id: z.string().uuid().nullable().optional(),
   expense_default_account_id: z.string().uuid().nullable().optional(),
+  sales_tax_rate: z.coerce.number().min(0).max(100).default(0),
 });
 
 export async function updateOrgSettingsAction(
@@ -130,7 +131,15 @@ export async function updateOrgAccountSettingsAction(
       .from("org_account_settings")
       .upsert({ org_id: orgId, ...rest });
     if (error) throw error;
-    revalidateOrgPaths(orgId, ["/settings", "/dashboard", "/journals", "/invoices", "/bills"]);
+    revalidateOrgPaths(orgId, [
+      "/settings",
+      "/dashboard",
+      "/journals",
+      "/invoices",
+      "/invoices/new",
+      "/bills",
+      "/reports",
+    ]);
     return { success: true };
   } catch (error) {
     return { success: false, error: parseActionError(error) };

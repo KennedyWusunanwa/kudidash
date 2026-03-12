@@ -40,5 +40,6 @@ export interface OrgAccountSettings {
   retained_earnings_account_id: string | null;
   revenue_default_account_id: string | null;
   expense_default_account_id: string | null;
+  sales_tax_rate: number;
   updated_at: string;
 }

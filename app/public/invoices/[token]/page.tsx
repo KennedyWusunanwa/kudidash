@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { getPublicInvoiceDocumentByToken } from "@/lib/data/receipts.data";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,11 @@ export default async function PublicInvoicePage({
         : "GHS";
   const amountPaid = Number(invoice.amount_paid ?? 0);
   const outstanding = Number((Number(invoice.total ?? 0) - amountPaid).toFixed(2));
+  const displayStatus = getInvoiceDisplayStatus(
+    invoice.status,
+    amountPaid,
+    Number(invoice.total ?? 0)
+  );
 
   return (
     <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-10">
@@ -80,7 +86,7 @@ export default async function PublicInvoicePage({
           <CardContent className="grid gap-3 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Status</p>
-              <p className="font-medium capitalize">{String(invoice.status ?? "draft")}</p>
+              <p className="font-medium capitalize">{displayStatus}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Invoice date</p>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listCustomers } from "@/lib/data/invoices.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
-import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
+import { getOrgAccountSettings, getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
 import { roleHasPermission } from "@/lib/permissions";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,12 @@ export default async function NewInvoicePage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [customers, accounts, inventoryItems, org, membership] = await Promise.all([
+  const [customers, accounts, inventoryItems, org, accountSettings, membership] = await Promise.all([
     listCustomers(orgId),
     listAccountsForSelect(orgId),
     listInventoryItems(orgId),
     getOrganizationById(orgId),
+    getOrgAccountSettings(orgId),
     requireOrgMembership(orgId),
   ]);
   const canManageSales = roleHasPermission(membership.role, "sales.manage");
@@ -55,6 +56,7 @@ export default async function NewInvoicePage({
               ? org.base_currency
               : undefined
           }
+          taxRate={Number(accountSettings?.sales_tax_rate ?? 0)}
           customers={(customers as Array<Record<string, unknown>>).map((c) => ({
             id: String(c.id),
             label: String(c.name),

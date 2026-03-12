@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { isDemoMode } from "@/lib/env";
+import { calculateInvoiceLineAmounts, normalizeTaxRate } from "@/lib/accounting/tax";
 import {
   ActionResult,
   getServerSupabaseForOrg,
@@ -21,6 +22,24 @@ const deleteInvoiceSchema = z.object({
   invoiceId: z.string().uuid(),
 });
 
+type InvoiceLineInput = z.infer<typeof invoiceSchema>["lines"][number];
+
+function buildComputedInvoiceLines(lines: InvoiceLineInput[], taxRate: number) {
+  return lines.map((line) => {
+    const amounts = calculateInvoiceLineAmounts(
+      { quantity: line.quantity, unit_price: line.unit_price },
+      taxRate
+    );
+
+    return {
+      ...line,
+      base_amount: amounts.baseAmount,
+      tax_amount: amounts.taxAmount,
+      line_total: amounts.lineTotal,
+    };
+  });
+}
+
 export async function createDraftInvoiceAction(
   input: z.infer<typeof createInvoiceSchema>
 ): Promise<ActionResult<{ invoiceId: string }>> {
@@ -31,16 +50,24 @@ export async function createDraftInvoiceAction(
       return { success: true, data: { invoiceId: crypto.randomUUID() } };
     }
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "sales.manage");
-    const { data: orgRow, error: orgError } = await supabase
-      .from("organizations")
-      .select("base_currency")
-      .eq("id", parsed.orgId)
-      .single();
+    const [
+      { data: orgRow, error: orgError },
+      { data: accountSettings, error: accountSettingsError },
+    ] = await Promise.all([
+      supabase.from("organizations").select("base_currency").eq("id", parsed.orgId).single(),
+      supabase
+        .from("org_account_settings")
+        .select("sales_tax_rate")
+        .eq("org_id", parsed.orgId)
+        .maybeSingle(),
+    ]);
     if (orgError) throw orgError;
+    if (accountSettingsError) throw accountSettingsError;
     const orgBaseCurrency =
       typeof orgRow?.base_currency === "string" && orgRow.base_currency.trim()
         ? orgRow.base_currency.trim().toUpperCase()
         : parsed.currency_code.toUpperCase();
+    const invoiceTaxRate = normalizeTaxRate(accountSettings?.sales_tax_rate);
 
     const customerPayload = {
       name: parsed.customer_name,
@@ -79,11 +106,12 @@ export async function createDraftInvoiceAction(
         typeof existingCustomer.tax_id === "string" ? existingCustomer.tax_id : null;
     }
 
+    const computedLines = buildComputedInvoiceLines(parsed.lines, invoiceTaxRate);
     const subtotal = Number(
-      parsed.lines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0).toFixed(2)
+      computedLines.reduce((sum, line) => sum + line.base_amount, 0).toFixed(2)
     );
     const tax_total = Number(
-      parsed.lines.reduce((sum, line) => sum + (line.tax_amount ?? 0), 0).toFixed(2)
+      computedLines.reduce((sum, line) => sum + line.tax_amount, 0).toFixed(2)
     );
     const total = Number((subtotal + tax_total).toFixed(2));
 
@@ -102,6 +130,7 @@ export async function createDraftInvoiceAction(
         due_date: parsed.due_date,
         currency_code: orgBaseCurrency,
         notes: parsed.notes || null,
+        tax_rate: invoiceTaxRate,
         subtotal,
         tax_total,
         total,
@@ -111,7 +140,7 @@ export async function createDraftInvoiceAction(
       .single();
     if (headerError) throw headerError;
 
-    const lines = parsed.lines.map((line, index) => ({
+    const lines = computedLines.map((line, index) => ({
       org_id: parsed.orgId,
       invoice_id: invoice.id,
       line_no: index + 1,
@@ -120,8 +149,8 @@ export async function createDraftInvoiceAction(
       unit_price: line.unit_price,
       inventory_item_id: line.inventory_item_id || null,
       revenue_account_id: line.revenue_account_id,
-      tax_amount: line.tax_amount ?? 0,
-      line_total: Number((line.quantity * line.unit_price + (line.tax_amount ?? 0)).toFixed(2)),
+      tax_amount: line.tax_amount,
+      line_total: line.line_total,
     }));
     const { error: lineError } = await supabase.from("invoice_lines").insert(lines);
     if (lineError) throw lineError;
@@ -153,13 +182,27 @@ export async function updateDraftInvoiceAction(
 
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "sales.manage");
 
-    const { data: existingInvoice, error: existingInvoiceError } = await supabase
-      .from("invoices")
-      .select("id, status, customer_id")
-      .eq("org_id", parsed.orgId)
-      .eq("id", parsed.invoiceId)
-      .single();
+    const [
+      { data: existingInvoice, error: existingInvoiceError },
+      { data: orgRow, error: orgError },
+      { data: accountSettings, error: accountSettingsError },
+    ] = await Promise.all([
+      supabase
+        .from("invoices")
+        .select("id, status, customer_id, tax_rate")
+        .eq("org_id", parsed.orgId)
+        .eq("id", parsed.invoiceId)
+        .single(),
+      supabase.from("organizations").select("base_currency").eq("id", parsed.orgId).single(),
+      supabase
+        .from("org_account_settings")
+        .select("sales_tax_rate")
+        .eq("org_id", parsed.orgId)
+        .maybeSingle(),
+    ]);
     if (existingInvoiceError) throw existingInvoiceError;
+    if (orgError) throw orgError;
+    if (accountSettingsError) throw accountSettingsError;
 
     const currentStatus = String(existingInvoice.status ?? "draft").toLowerCase();
     if (!["draft", "approved"].includes(currentStatus)) {
@@ -169,16 +212,13 @@ export async function updateDraftInvoiceAction(
       };
     }
 
-    const { data: orgRow, error: orgError } = await supabase
-      .from("organizations")
-      .select("base_currency")
-      .eq("id", parsed.orgId)
-      .single();
-    if (orgError) throw orgError;
     const orgBaseCurrency =
       typeof orgRow?.base_currency === "string" && orgRow.base_currency.trim()
         ? orgRow.base_currency.trim().toUpperCase()
         : parsed.currency_code.toUpperCase();
+    const invoiceTaxRate = normalizeTaxRate(
+      existingInvoice.tax_rate ?? accountSettings?.sales_tax_rate
+    );
 
     const customerPayload = {
       name: parsed.customer_name,
@@ -217,11 +257,12 @@ export async function updateDraftInvoiceAction(
         typeof existingCustomer.tax_id === "string" ? existingCustomer.tax_id : null;
     }
 
+    const computedLines = buildComputedInvoiceLines(parsed.lines, invoiceTaxRate);
     const subtotal = Number(
-      parsed.lines.reduce((sum, line) => sum + line.quantity * line.unit_price, 0).toFixed(2)
+      computedLines.reduce((sum, line) => sum + line.base_amount, 0).toFixed(2)
     );
     const tax_total = Number(
-      parsed.lines.reduce((sum, line) => sum + (line.tax_amount ?? 0), 0).toFixed(2)
+      computedLines.reduce((sum, line) => sum + line.tax_amount, 0).toFixed(2)
     );
     const total = Number((subtotal + tax_total).toFixed(2));
 
@@ -232,7 +273,7 @@ export async function updateDraftInvoiceAction(
       .eq("invoice_id", parsed.invoiceId);
     if (deleteLinesError) throw deleteLinesError;
 
-    const lines = parsed.lines.map((line, index) => ({
+    const lines = computedLines.map((line, index) => ({
       org_id: parsed.orgId,
       invoice_id: parsed.invoiceId,
       line_no: index + 1,
@@ -241,8 +282,8 @@ export async function updateDraftInvoiceAction(
       unit_price: line.unit_price,
       inventory_item_id: line.inventory_item_id || null,
       revenue_account_id: line.revenue_account_id,
-      tax_amount: line.tax_amount ?? 0,
-      line_total: Number((line.quantity * line.unit_price + (line.tax_amount ?? 0)).toFixed(2)),
+      tax_amount: line.tax_amount,
+      line_total: line.line_total,
     }));
     const { error: lineError } = await supabase.from("invoice_lines").insert(lines);
     if (lineError) throw lineError;
@@ -261,6 +302,7 @@ export async function updateDraftInvoiceAction(
         due_date: parsed.due_date,
         currency_code: orgBaseCurrency,
         notes: parsed.notes || null,
+        tax_rate: invoiceTaxRate,
         subtotal,
         tax_total,
         total,

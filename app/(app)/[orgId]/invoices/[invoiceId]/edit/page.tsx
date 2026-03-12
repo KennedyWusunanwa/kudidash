@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { getInvoice, listCustomers } from "@/lib/data/invoices.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
-import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
+import { getOrgAccountSettings, getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
 import { roleHasPermission } from "@/lib/permissions";
 import { InvoiceForm } from "@/components/forms/invoice-form";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,13 @@ export default async function EditInvoicePage({
 }) {
   const { orgId, invoiceId } = await params;
 
-  const [membership, customers, accounts, inventoryItems, org] = await Promise.all([
+  const [membership, customers, accounts, inventoryItems, org, accountSettings] = await Promise.all([
     requireOrgMembership(orgId),
     listCustomers(orgId),
     listAccountsForSelect(orgId),
     listInventoryItems(orgId),
     getOrganizationById(orgId),
+    getOrgAccountSettings(orgId),
   ]);
   const canManageInvoice = roleHasPermission(membership.role, "sales.manage");
 
@@ -124,6 +125,7 @@ export default async function EditInvoicePage({
               ? org.base_currency
               : undefined
           }
+          taxRate={Number(invoice.tax_rate ?? accountSettings?.sales_tax_rate ?? 0)}
           customers={(customers as Array<Record<string, unknown>>).map((c) => ({
             id: String(c.id),
             label: String(c.name),

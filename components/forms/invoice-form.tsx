@@ -8,6 +8,11 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  calculateInvoiceLineAmounts,
+  calculateInvoiceTotals,
+  normalizeTaxRate,
+} from "@/lib/accounting/tax";
 import { createDraftInvoiceAction, updateDraftInvoiceAction } from "@/lib/actions/invoices.actions";
 import { CURRENCY_OPTIONS, DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { formatCurrency } from "@/lib/format";
@@ -88,6 +93,7 @@ export function InvoiceForm({
   mode = "create",
   invoiceId,
   initialValues,
+  taxRate,
 }: {
   orgId: string;
   defaultCurrencyCode?: string | null;
@@ -97,11 +103,14 @@ export function InvoiceForm({
   mode?: "create" | "edit";
   invoiceId?: string;
   initialValues?: InvoiceFormInitialValues;
+  taxRate?: number | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const lockedCurrencyCode =
     (defaultCurrencyCode || DEFAULT_CURRENCY_CODE).trim().toUpperCase() || DEFAULT_CURRENCY_CODE;
+  const effectiveTaxRate = normalizeTaxRate(taxRate);
+  const formattedTaxRate = Number(effectiveTaxRate.toFixed(2)).toString();
   const form = useForm({
     resolver: zodResolver(invoiceSchema),
     defaultValues: {
@@ -180,17 +189,14 @@ export function InvoiceForm({
     });
   }, [customersById, form, selectedCustomerId]);
   const totals = useMemo(() => {
-    const subtotal = (lines ?? []).reduce(
-      (sum, line) => sum + Number(line?.quantity ?? 0) * Number(line?.unit_price ?? 0),
-      0
+    return calculateInvoiceTotals(
+      (lines ?? []).map((line) => ({
+        quantity: Number(line?.quantity ?? 0),
+        unit_price: Number(line?.unit_price ?? 0),
+      })),
+      effectiveTaxRate
     );
-    const tax = (lines ?? []).reduce((sum, line) => sum + Number(line?.tax_amount ?? 0), 0);
-    return {
-      subtotal: Number(subtotal.toFixed(2)),
-      tax: Number(tax.toFixed(2)),
-      total: Number((subtotal + tax).toFixed(2)),
-    };
-  }, [lines]);
+  }, [effectiveTaxRate, lines]);
 
   const onSubmit = (values: unknown) => {
     startTransition(async () => {
@@ -401,23 +407,28 @@ export function InvoiceForm({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Invoice lines</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    append({
-                      inventory_item_id: "",
-                      description: "",
-                      quantity: 1,
-                      unit_price: 0,
-                      revenue_account_id: revenueAccounts[0]?.id ?? "",
-                      tax_amount: 0,
-                    })
-                  }
-                >
-                  <Plus className="size-4" />
-                  Add line
-                </Button>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Tax rate from Settings: {formattedTaxRate}%
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      append({
+                        inventory_item_id: "",
+                        description: "",
+                        quantity: 1,
+                        unit_price: 0,
+                        revenue_account_id: revenueAccounts[0]?.id ?? "",
+                        tax_amount: 0,
+                      })
+                    }
+                  >
+                    <Plus className="size-4" />
+                    Add line
+                  </Button>
+                </div>
               </div>
 
               {fields.map((field, index) => (
@@ -562,15 +573,30 @@ export function InvoiceForm({
                   <FormField
                     control={form.control}
                     name={`lines.${index}.tax_amount`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="md:sr-only">Tax</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" {...(field as any)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={() => {
+                      const amounts = calculateInvoiceLineAmounts(
+                        {
+                          quantity: Number(form.getValues(`lines.${index}.quantity`) ?? 0),
+                          unit_price: Number(form.getValues(`lines.${index}.unit_price`) ?? 0),
+                        },
+                        effectiveTaxRate
+                      );
+
+                      return (
+                        <FormItem>
+                          <FormLabel className="md:sr-only">Tax</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={String(amounts.taxAmount.toFixed(2))}
+                              disabled
+                              readOnly
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">{formattedTaxRate}% applied</p>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                   <div className="flex items-center">
                     <Button

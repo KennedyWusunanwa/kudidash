@@ -5,6 +5,7 @@ import { startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { deleteInvoiceAction, postInvoiceAction } from "@/lib/actions/invoices.actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ type InvoiceRow = {
   status: string;
   currency_code?: string | null;
   total: number;
+  amount_paid?: number | null;
 };
 
 export function InvoicesTable({
@@ -74,6 +76,11 @@ export function InvoicesTable({
             invoices.map((invoice) => {
               const canModifyDraft =
                 invoice.status === "draft" || invoice.status === "approved";
+              const displayStatus = getInvoiceDisplayStatus(
+                invoice.status,
+                invoice.amount_paid,
+                invoice.total
+              );
               return (
                 <TableRow key={invoice.id}>
                 <TableCell className="font-medium">
@@ -84,8 +91,8 @@ export function InvoicesTable({
                 <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
                 <TableCell>{formatDate(invoice.due_date)}</TableCell>
                 <TableCell>
-                  <Badge variant={invoice.status === "posted" ? "default" : "secondary"}>
-                    {invoice.status}
+                  <Badge variant={displayStatus === "paid" ? "default" : "secondary"}>
+                    {displayStatus}
                   </Badge>
                 </TableCell>
                 <TableCell>{String(invoice.currency_code ?? "-")}</TableCell>

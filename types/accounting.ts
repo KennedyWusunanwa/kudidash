@@ -84,9 +84,12 @@ export interface Invoice extends BaseOrgScopedRecord {
   due_date: string;
   currency_code: string;
   status: InvoiceStatus;
+  tax_rate?: number;
   subtotal: number;
   tax_total: number;
   total: number;
+  amount_paid?: number;
+  paid_at?: string | null;
 }
 
 export interface BillLine {

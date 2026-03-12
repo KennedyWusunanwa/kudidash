@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { getInvoice } from "@/lib/data/invoices.data";
 import { listInvoiceReceipts } from "@/lib/data/receipts.data";
 import { requireOrgMembership } from "@/lib/data/org.data";
@@ -47,6 +48,7 @@ export default async function InvoiceDetailPage({
   const amountPaid = Number(invoice.amount_paid ?? 0);
   const total = Number(invoice.total ?? 0);
   const outstanding = Number((total - amountPaid).toFixed(2));
+  const displayStatus = getInvoiceDisplayStatus(invoice.status, amountPaid, total);
   const customerId = typeof invoice.customer_id === "string" ? invoice.customer_id : "";
   const publicViewToken =
     typeof invoice.public_view_token === "string" ? invoice.public_view_token : null;
@@ -72,7 +74,7 @@ export default async function InvoiceDetailPage({
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Status</p>
-            <p className="font-medium capitalize">{String(invoice.status ?? "-")}</p>
+            <p className="font-medium capitalize">{displayStatus}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Currency</p>
@@ -163,6 +165,7 @@ export default async function InvoiceDetailPage({
                 status: String(invoice.status ?? "draft"),
                 currency_code: invoiceCurrency,
                 total,
+                amount_paid: amountPaid,
               },
             ]}
           />
