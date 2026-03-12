@@ -6,6 +6,7 @@ import {
   type PDFImage,
   type PDFPage,
 } from "pdf-lib";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 
 type InvoiceLineLike = {
   id?: string;
@@ -272,7 +273,7 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   const contentWidth = PAGE.width - MARGIN * 2;
   const rightEdge = PAGE.width - MARGIN;
   const currency = payload.invoice.currency_code || payload.org.base_currency || "GHS";
-  const invoiceDisplayNo = payload.invoice.invoice_no || payload.invoice.id;
+  const invoiceDisplayNo = getInvoiceDisplayNumber(payload.invoice.invoice_no, payload.invoice.id);
   const statusLabel = (payload.invoice.status || "draft").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   const taxRateLabel = taxRateFmt(payload.invoice.tax_rate);
 

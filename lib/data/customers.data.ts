@@ -1,4 +1,5 @@
 import { demoCustomers, demoInvoices } from "@/lib/demo/data";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { isDemoMode } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -198,7 +199,7 @@ function buildCustomerActivities(params: {
       id: `invoice-${invoice.id}`,
       kind: "invoice",
       activity_date: invoice.invoice_date || invoice.created_at || "",
-      title: `Invoice ${invoice.invoice_no ?? invoice.id.slice(0, 8)}`,
+      title: `Invoice ${getInvoiceDisplayNumber(invoice.invoice_no, invoice.id)}`,
       description: `Status: ${invoice.status}`,
       amount: invoice.total,
       currency_code: invoice.currency_code,

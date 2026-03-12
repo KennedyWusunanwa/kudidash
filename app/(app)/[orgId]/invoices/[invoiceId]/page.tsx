@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { formatTaxRate } from "@/lib/accounting/tax";
 import { getInvoice } from "@/lib/data/invoices.data";
@@ -50,6 +51,10 @@ export default async function InvoiceDetailPage({
   const total = Number(invoice.total ?? 0);
   const outstanding = Number((total - amountPaid).toFixed(2));
   const displayStatus = getInvoiceDisplayStatus(invoice.status, amountPaid, total);
+  const displayInvoiceNo = getInvoiceDisplayNumber(
+    typeof invoice.invoice_no === "string" ? invoice.invoice_no : null,
+    typeof invoice.id === "string" ? invoice.id : invoiceId
+  );
   const taxRateLabel = formatTaxRate(invoice.tax_rate);
   const customerId = typeof invoice.customer_id === "string" ? invoice.customer_id : "";
   const publicViewToken =
@@ -64,7 +69,7 @@ export default async function InvoiceDetailPage({
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <p className="text-xs text-muted-foreground">Invoice</p>
-            <p className="font-medium">{String(invoice.invoice_no ?? invoice.id)}</p>
+            <p className="font-medium">{displayInvoiceNo}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Date</p>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, PlusCircle } from "lucide-react";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getCustomerProfile } from "@/lib/data/customers.data";
 import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
 import { roleHasPermission } from "@/lib/permissions";
@@ -249,7 +250,7 @@ export default async function CustomerProfilePage({
                       invoices.map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium">
-                            {invoice.invoice_no ?? invoice.id.slice(0, 8)}
+                            {getInvoiceDisplayNumber(invoice.invoice_no, invoice.id)}
                           </TableCell>
                           <TableCell>{formatDate(invoice.invoice_date)}</TableCell>
                           <TableCell>{formatDate(invoice.due_date)}</TableCell>

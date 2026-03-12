@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { formatTaxRate } from "@/lib/accounting/tax";
 import { getPublicInvoiceDocumentByToken } from "@/lib/data/receipts.data";
@@ -42,6 +43,10 @@ export default async function PublicInvoicePage({
     amountPaid,
     Number(invoice.total ?? 0)
   );
+  const displayInvoiceNo = getInvoiceDisplayNumber(
+    typeof invoice.invoice_no === "string" ? invoice.invoice_no : null,
+    typeof invoice.id === "string" ? invoice.id : null
+  );
   const taxRateLabel = formatTaxRate(invoice.tax_rate);
 
   return (
@@ -49,9 +54,7 @@ export default async function PublicInvoicePage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">KudiDash document</p>
-          <h1 className="text-3xl font-semibold">
-            {String(invoice.invoice_no ?? invoice.id ?? "Invoice")}
-          </h1>
+          <h1 className="text-3xl font-semibold">{displayInvoiceNo}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Issued by {String(org.invoice_company_name ?? org.name ?? "Organization")}
           </p>

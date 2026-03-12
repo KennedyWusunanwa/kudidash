@@ -5,6 +5,7 @@ import { startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { deleteInvoiceAction, postInvoiceAction } from "@/lib/actions/invoices.actions";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -44,7 +45,7 @@ export function InvoicesTable({
   const router = useRouter();
 
   const deleteInvoice = (invoice: InvoiceRow) => {
-    const label = invoice.invoice_no ?? invoice.id.slice(0, 8);
+    const label = getInvoiceDisplayNumber(invoice.invoice_no, invoice.id);
     if (!window.confirm(`Delete invoice ${label}? This cannot be undone.`)) return;
     startTransition(async () => {
       const result = await deleteInvoiceAction({ orgId, invoiceId: invoice.id });
@@ -85,7 +86,7 @@ export function InvoicesTable({
                 <TableRow key={invoice.id}>
                 <TableCell className="font-medium">
                   <Link href={`/${orgId}/invoices/${invoice.id}`} className="hover:underline">
-                    {invoice.invoice_no ?? invoice.id.slice(0, 8)}
+                    {getInvoiceDisplayNumber(invoice.invoice_no, invoice.id)}
                   </Link>
                 </TableCell>
                 <TableCell>{formatDate(invoice.invoice_date)}</TableCell>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getInvoice } from "@/lib/data/invoices.data";
 import { getOrganizationById } from "@/lib/data/org.data";
 import { buildInvoicePdf } from "@/lib/pdf/invoice-pdf";
@@ -83,9 +84,10 @@ export async function GET(
       generatedAt: new Date(),
     });
 
-    const invoiceNo =
-      (invoice.invoice_no as string | null | undefined) ??
-      `invoice-${String(invoice.id ?? invoiceId).slice(0, 8)}`;
+    const invoiceNo = getInvoiceDisplayNumber(
+      (invoice.invoice_no as string | null | undefined) ?? null,
+      String(invoice.id ?? invoiceId)
+    );
     const filename = `${safeFileNamePart(invoiceNo)}.pdf`;
 
     return new NextResponse(pdfBytes as BodyInit, {

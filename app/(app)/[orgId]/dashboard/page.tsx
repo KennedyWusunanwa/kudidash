@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getDashboardKpis, getRevenueExpenseSeries } from "@/lib/data/reports.data";
 import { listBillsToApprove } from "@/lib/data/bills.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
@@ -132,7 +133,9 @@ export default async function DashboardPage({
                   className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent"
                 >
                   <div>
-                    <p className="text-sm font-medium">{invoice.invoice_no ?? invoice.id.slice(0, 8)}</p>
+                    <p className="text-sm font-medium">
+                      {getInvoiceDisplayNumber(invoice.invoice_no, invoice.id)}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {formatDate(invoice.invoice_date)} · {invoice.status}
                     </p>

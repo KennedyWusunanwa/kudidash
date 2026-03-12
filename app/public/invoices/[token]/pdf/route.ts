@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getPublicInvoiceDocumentByToken } from "@/lib/data/receipts.data";
 import { buildInvoicePdf } from "@/lib/pdf/invoice-pdf";
 
@@ -81,7 +82,12 @@ export async function GET(
     generatedAt: new Date(),
   });
 
-  const filename = `${safeFileNamePart(String(invoice.invoice_no ?? invoice.id ?? "invoice"))}.pdf`;
+  const filename = `${safeFileNamePart(
+    getInvoiceDisplayNumber(
+      typeof invoice.invoice_no === "string" ? invoice.invoice_no : null,
+      typeof invoice.id === "string" ? invoice.id : null
+    )
+  )}.pdf`;
   return new NextResponse(pdfBytes as BodyInit, {
     status: 200,
     headers: {

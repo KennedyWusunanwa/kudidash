@@ -1,4 +1,5 @@
 import { formatISO, startOfMonth } from "date-fns";
+import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import {
   getDemoBalanceSheet,
   demoCustomers,
@@ -41,7 +42,10 @@ function buildCustomerTransactionRows(params: {
     return {
       transaction_type: "invoice",
       transaction_id: String(invoice.id ?? ""),
-      document_no: String(invoice.invoice_no ?? invoice.id ?? ""),
+      document_no: getInvoiceDisplayNumber(
+        typeof invoice.invoice_no === "string" ? invoice.invoice_no : null,
+        typeof invoice.id === "string" ? invoice.id : null
+      ),
       transaction_date: String(invoice.invoice_date ?? ""),
       due_date: String(invoice.due_date ?? ""),
       status: String(invoice.status ?? ""),
