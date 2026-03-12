@@ -2,8 +2,14 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { Topbar } from "@/components/app-shell/topbar";
+import { RouteTransition } from "@/components/motion/route-transition";
 import { getDashboardBrandCssVars } from "@/lib/branding";
-import { getCurrentUser, getOrganizationById, listUserOrganizations, requireOrgMembership } from "@/lib/data/org.data";
+import {
+  getCurrentUser,
+  getOrganizationById,
+  listUserOrganizations,
+  requireOrgMembership,
+} from "@/lib/data/org.data";
 
 export default async function OrgLayout({
   children,
@@ -46,13 +52,15 @@ export default async function OrgLayout({
             branding={{ dashboardName, logoUrl: dashboardLogoUrl }}
           />
           <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6">
-            <div className="mb-4">
-              <h1 className="text-lg font-semibold tracking-tight">{org?.name ?? "Organization"}</h1>
-              <p className="text-sm text-muted-foreground">
-                Multi-tenant accounting workspace · Org ID: {orgId}
-              </p>
-            </div>
-            {children}
+            <RouteTransition>
+              <div className="mb-4">
+                <h1 className="text-lg font-semibold tracking-tight">{org?.name ?? "Organization"}</h1>
+                <p className="text-sm text-muted-foreground">
+                  Multi-tenant accounting workspace - Org ID: {orgId}
+                </p>
+              </div>
+              {children}
+            </RouteTransition>
           </main>
         </div>
       </div>

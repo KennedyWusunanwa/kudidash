@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NavigationPreloader } from "@/components/motion/navigation-preloader";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -31,6 +32,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <div className="min-h-screen bg-background text-foreground">
+            <NavigationPreloader />
             {children}
           </div>
           <Toaster richColors position="top-right" />
