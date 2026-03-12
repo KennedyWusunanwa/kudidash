@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
+import { formatTaxRate } from "@/lib/accounting/tax";
 import { getInvoice } from "@/lib/data/invoices.data";
 import { listInvoiceReceipts } from "@/lib/data/receipts.data";
 import { requireOrgMembership } from "@/lib/data/org.data";
@@ -49,6 +50,7 @@ export default async function InvoiceDetailPage({
   const total = Number(invoice.total ?? 0);
   const outstanding = Number((total - amountPaid).toFixed(2));
   const displayStatus = getInvoiceDisplayStatus(invoice.status, amountPaid, total);
+  const taxRateLabel = formatTaxRate(invoice.tax_rate);
   const customerId = typeof invoice.customer_id === "string" ? invoice.customer_id : "";
   const publicViewToken =
     typeof invoice.public_view_token === "string" ? invoice.public_view_token : null;
@@ -85,7 +87,7 @@ export default async function InvoiceDetailPage({
             <p className="font-medium">{formatCurrency(Number(invoice.subtotal ?? 0), invoiceCurrency)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Tax</p>
+            <p className="text-xs text-muted-foreground">{`Tax (${taxRateLabel})`}</p>
             <p className="font-medium">{formatCurrency(Number(invoice.tax_total ?? 0), invoiceCurrency)}</p>
           </div>
           <div>

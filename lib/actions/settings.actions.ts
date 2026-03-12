@@ -131,12 +131,17 @@ export async function updateOrgAccountSettingsAction(
       .from("org_account_settings")
       .upsert({ org_id: orgId, ...rest });
     if (error) throw error;
+    const { error: syncError } = await supabase.rpc("kd_sync_draft_invoice_taxes", {
+      p_org_id: orgId,
+    });
+    if (syncError) throw syncError;
     revalidateOrgPaths(orgId, [
       "/settings",
       "/dashboard",
       "/journals",
       "/invoices",
       "/invoices/new",
+      "/customers",
       "/bills",
       "/reports",
     ]);

@@ -217,7 +217,7 @@ export async function updateDraftInvoiceAction(
         ? orgRow.base_currency.trim().toUpperCase()
         : parsed.currency_code.toUpperCase();
     const invoiceTaxRate = normalizeTaxRate(
-      existingInvoice.tax_rate ?? accountSettings?.sales_tax_rate
+      accountSettings?.sales_tax_rate ?? existingInvoice.tax_rate
     );
 
     const customerPayload = {

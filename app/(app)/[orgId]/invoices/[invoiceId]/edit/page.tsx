@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { resolveInvoiceTaxRate } from "@/lib/accounting/tax";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { getInvoice, listCustomers } from "@/lib/data/invoices.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
@@ -125,7 +126,7 @@ export default async function EditInvoicePage({
               ? org.base_currency
               : undefined
           }
-          taxRate={Number(invoice.tax_rate ?? accountSettings?.sales_tax_rate ?? 0)}
+          taxRate={resolveInvoiceTaxRate(invoice.tax_rate, accountSettings?.sales_tax_rate)}
           customers={(customers as Array<Record<string, unknown>>).map((c) => ({
             id: String(c.id),
             label: String(c.name),

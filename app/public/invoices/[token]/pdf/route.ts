@@ -71,6 +71,7 @@ export async function GET(
       due_date: typeof invoice.due_date === "string" ? invoice.due_date : null,
       status: typeof invoice.status === "string" ? invoice.status : "draft",
       currency_code: typeof invoice.currency_code === "string" ? invoice.currency_code : "GHS",
+      tax_rate: Number(invoice.tax_rate ?? 0),
       subtotal: Number(invoice.subtotal ?? 0),
       tax_total: Number(invoice.tax_total ?? 0),
       total: Number(invoice.total ?? 0),

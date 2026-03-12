@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
+import { formatTaxRate } from "@/lib/accounting/tax";
 import { getPublicInvoiceDocumentByToken } from "@/lib/data/receipts.data";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ export default async function PublicInvoicePage({
     amountPaid,
     Number(invoice.total ?? 0)
   );
+  const taxRateLabel = formatTaxRate(invoice.tax_rate);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-10">
@@ -95,6 +97,14 @@ export default async function PublicInvoicePage({
             <div>
               <p className="text-xs text-muted-foreground">Due date</p>
               <p className="font-medium">{formatDate(String(invoice.due_date ?? ""))}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Subtotal</p>
+              <p className="font-medium">{formatCurrency(Number(invoice.subtotal ?? 0), currency)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{`Tax (${taxRateLabel})`}</p>
+              <p className="font-medium">{formatCurrency(Number(invoice.tax_total ?? 0), currency)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total</p>

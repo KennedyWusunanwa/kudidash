@@ -14,6 +14,20 @@ export function normalizeTaxRate(value: unknown) {
   return Number(Math.min(numeric, 100).toFixed(4));
 }
 
+export function resolveInvoiceTaxRate(invoiceTaxRate: unknown, fallbackTaxRate: unknown) {
+  const normalizedInvoiceTaxRate = normalizeTaxRate(invoiceTaxRate);
+  if (normalizedInvoiceTaxRate > 0) {
+    return normalizedInvoiceTaxRate;
+  }
+  return normalizeTaxRate(fallbackTaxRate);
+}
+
+export function formatTaxRate(value: unknown) {
+  const normalizedTaxRate = normalizeTaxRate(value);
+  if (normalizedTaxRate <= 0) return "0%";
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(normalizedTaxRate)}%`;
+}
+
 export function calculateInvoiceLineAmounts(line: TaxableLineInput, taxRate: unknown) {
   const quantity = Number(line.quantity ?? 0);
   const unitPrice = Number(line.unit_price ?? 0);

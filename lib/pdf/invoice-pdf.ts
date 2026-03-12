@@ -24,6 +24,7 @@ type InvoiceLike = {
   due_date?: string | null;
   status?: string | null;
   currency_code?: string | null;
+  tax_rate?: number | null;
   subtotal?: number | null;
   tax_total?: number | null;
   total?: number | null;
@@ -81,6 +82,12 @@ function dateFmt(value: string | null | undefined) {
 
 function numberFmt(value: number | null | undefined) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value ?? 0);
+}
+
+function taxRateFmt(value: number | null | undefined) {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "0%";
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(numeric)}%`;
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
@@ -267,6 +274,7 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   const currency = payload.invoice.currency_code || payload.org.base_currency || "GHS";
   const invoiceDisplayNo = payload.invoice.invoice_no || payload.invoice.id;
   const statusLabel = (payload.invoice.status || "draft").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  const taxRateLabel = taxRateFmt(payload.invoice.tax_rate);
 
   const companyLines: string[] = [companyName];
   pushMultiline(companyLines, payload.org.invoice_company_address || null);
@@ -597,7 +605,11 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   const totalsX = rightEdge - totalsWidth;
   const totalsRows = [
     { label: "Subtotal:", value: currencyFmt(payload.invoice.subtotal, currency), isTotal: false },
-    { label: "Tax:", value: currencyFmt(payload.invoice.tax_total, currency), isTotal: false },
+    {
+      label: `Tax (${taxRateLabel}):`,
+      value: currencyFmt(payload.invoice.tax_total, currency),
+      isTotal: false,
+    },
     { label: "Total:", value: currencyFmt(payload.invoice.total, currency), isTotal: true },
   ] as const;
   const totalsHeight = 108;
