@@ -1,4 +1,5 @@
 import { isDemoMode } from "@/lib/env";
+import { getCatalogItemBySku, getProductImagePublicUrl } from "@/lib/inventory/catalog";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const demoInventoryItems = [
@@ -57,6 +58,8 @@ export async function listInventoryItems(orgId: string) {
   if (error) throw error;
   return (data ?? []).map((row) => ({
     ...row,
+    catalog_item: getCatalogItemBySku(String((row as Record<string, unknown>).sku ?? "")),
+    image_url: getProductImagePublicUrl(orgId, String((row as Record<string, unknown>).sku ?? "")),
     stock_value: Number(
       (Number((row as Record<string, unknown>).quantity_on_hand ?? 0) * Number((row as Record<string, unknown>).purchase_price ?? 0)).toFixed(2)
     ),

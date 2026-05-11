@@ -25,6 +25,12 @@ type InventoryRow = {
   id: string;
   sku: string;
   name: string;
+  image_url?: string | null;
+  catalog_item?: {
+    brand?: string;
+    category?: string;
+    sizeWeight?: string;
+  } | null;
   sale_price?: number | null;
   purchase_price?: number | null;
   quantity_on_hand?: number | null;
@@ -110,6 +116,7 @@ export function InventoryItemsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Image</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Valuation</TableHead>
@@ -129,8 +136,31 @@ export function InventoryItemsTable({
             {optimisticRows.length ? (
               optimisticRows.map((item) => (
                 <TableRow key={item.id}>
+                  <TableCell>
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="h-14 w-14 rounded-md border object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
+                        N/A
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{item.sku}</TableCell>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell>
+                    <div className="font-medium">{item.name}</div>
+                    {item.catalog_item?.brand || item.catalog_item?.category || item.catalog_item?.sizeWeight ? (
+                      <div className="text-xs text-muted-foreground">
+                        {[item.catalog_item?.brand, item.catalog_item?.category, item.catalog_item?.sizeWeight]
+                          .filter(Boolean)
+                          .join(" | ")}
+                      </div>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="capitalize">
                     {item.valuation_method.replace(/_/g, " ")}
                   </TableCell>
@@ -186,7 +216,7 @@ export function InventoryItemsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={13} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={14} className="py-8 text-center text-muted-foreground">
                   No inventory items yet.
                 </TableCell>
               </TableRow>
@@ -201,9 +231,24 @@ export function InventoryItemsTable({
             <div key={item.id} className="rounded-lg border p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="mb-3 h-24 w-24 rounded-md border object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
                   <div className="text-sm font-semibold">
                     {item.sku} - {item.name}
                   </div>
+                  {item.catalog_item?.brand || item.catalog_item?.category || item.catalog_item?.sizeWeight ? (
+                    <div className="text-xs text-muted-foreground">
+                      {[item.catalog_item?.brand, item.catalog_item?.category, item.catalog_item?.sizeWeight]
+                        .filter(Boolean)
+                        .join(" | ")}
+                    </div>
+                  ) : null}
                   <div className="text-xs text-muted-foreground capitalize">
                     {item.valuation_method.replace(/_/g, " ")}
                   </div>

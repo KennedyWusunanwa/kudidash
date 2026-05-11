@@ -1,10 +1,12 @@
 import { Boxes } from "lucide-react";
+import Link from "next/link";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
 import { getOrganizationById, requireOrgMembership } from "@/lib/data/org.data";
 import { roleHasPermission } from "@/lib/permissions";
 import { InventoryItemForm } from "@/components/forms/inventory-item-form";
 import { InventoryItemsTable } from "@/components/tables/inventory-items-table";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function InventoryPage({
@@ -36,17 +38,22 @@ export default async function InventoryPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-lg border bg-background">
-          <Boxes className="size-5" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-lg border bg-background">
+            <Boxes className="size-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Inventory</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage stock quantities, pricing defaults, and account mappings used by bills, invoices,
+              and inventory valuation.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Inventory</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage stock quantities, pricing defaults, and account mappings used by bills, invoices,
-            and inventory valuation.
-          </p>
-        </div>
+        <Button asChild variant="outline">
+          <Link href={`/${orgId}/inventory/export`}>Download inventory workbook</Link>
+        </Button>
       </div>
 
       <Card>
