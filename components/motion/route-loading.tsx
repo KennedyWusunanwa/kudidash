@@ -12,7 +12,10 @@ export function RouteLoading({
       <div className="relative grid w-full max-w-5xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6 rounded-[2rem] border bg-card/92 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.35)]">
           <div className="space-y-3">
-            <div className="loading-shimmer h-3 w-24 rounded-full bg-muted" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-primary">
+              <span className="loading-spinner size-3" />
+              Loading
+            </div>
             <div className="loading-shimmer h-10 w-full max-w-xl rounded-2xl bg-muted/80" />
             <div className="loading-shimmer h-3 w-full max-w-md rounded-full bg-muted" />
           </div>
@@ -26,7 +29,8 @@ export function RouteLoading({
 
         <div className="flex flex-col justify-between rounded-[2rem] border bg-card/92 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.35)]">
           <div className="space-y-4">
-            <div className="inline-flex w-fit rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-primary">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-primary">
+              <span className="loading-spinner size-3" />
               Working
             </div>
             <div className="space-y-2">
@@ -36,6 +40,9 @@ export function RouteLoading({
           </div>
           <div className="space-y-4">
             <div className="loading-shimmer h-2 rounded-full bg-muted" />
+            <div className="route-loading-bar">
+              <span />
+            </div>
             <div className="grid gap-3">
               <div className="loading-shimmer h-16 rounded-2xl border bg-background/70" />
               <div className="loading-shimmer h-16 rounded-2xl border bg-background/70" />

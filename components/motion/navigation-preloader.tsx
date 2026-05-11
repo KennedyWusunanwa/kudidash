@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BOOT_MIN_MS = 720;
@@ -148,6 +149,10 @@ export function NavigationPreloader() {
           {mode === "boot"
             ? "Preloading shell, data hooks, and navigation state."
             : "Prefetching data and easing the page into place."}
+        </div>
+        <div className="nav-preloader__status">
+          <LoaderCircle className="size-4 animate-spin" />
+          <span>{mode === "boot" ? "Loading application" : "Loading content"}</span>
         </div>
         <div className="nav-preloader__bar">
           <span />
