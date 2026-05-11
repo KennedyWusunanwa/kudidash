@@ -68,20 +68,34 @@ export async function listInventoryItems(orgId: string) {
 
 export async function getInventoryItem(orgId: string, itemId: string) {
   if (isDemoMode()) {
-    return (
-      demoInventoryItems.find((row) => row.id === itemId) ??
-      ({ ...demoInventoryItems[0], id: itemId, org_id: orgId, sku: "ITEM-EDIT", name: "Demo Item" } as any)
-    );
+    const row =
+      demoInventoryItems.find((item) => item.id === itemId) ??
+      ({ ...demoInventoryItems[0], id: itemId, org_id: orgId, sku: "ITEM-EDIT", name: "Demo Item" } as any);
+    return {
+      ...row,
+      catalog_item: getCatalogItemBySku(String(row.sku ?? "")),
+      image_url: getProductImagePublicUrl(orgId, String(row.sku ?? "")),
+      stock_value: Number((Number(row.quantity_on_hand ?? 0) * Number(row.purchase_price ?? 0)).toFixed(2)),
+    };
   }
 
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("inventory_items")
-    .select("*")
+    .select(
+      "*, inventory_account:inventory_account_id(id, code, name), cogs_account:cogs_account_id(id, code, name), revenue_account:revenue_account_id(id, code, name)"
+    )
     .eq("org_id", orgId)
     .eq("id", itemId)
     .single();
 
   if (error) throw error;
-  return data;
+  return {
+    ...data,
+    catalog_item: getCatalogItemBySku(String((data as Record<string, unknown>).sku ?? "")),
+    image_url: getProductImagePublicUrl(orgId, String((data as Record<string, unknown>).sku ?? "")),
+    stock_value: Number(
+      (Number((data as Record<string, unknown>).quantity_on_hand ?? 0) * Number((data as Record<string, unknown>).purchase_price ?? 0)).toFixed(2)
+    ),
+  };
 }

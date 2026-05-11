@@ -1,4 +1,4 @@
-import { Boxes } from "lucide-react";
+import { Boxes, Download, PackageSearch, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { listAccountsForSelect } from "@/lib/data/coa.data";
 import { listInventoryItems } from "@/lib/data/inventory.data";
@@ -35,53 +35,63 @@ export default async function InventoryPage({
     (sum, item) => sum + Number(item.quantity_on_hand ?? 0),
     0
   );
+  const activeItems = (items as Array<Record<string, unknown>>).filter((item) => item.is_active !== false).length;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg border bg-background">
-            <Boxes className="size-5" />
+          <div className="flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-background shadow-sm">
+            <PackageSearch className="size-5" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">Inventory</h2>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+              <Sparkles className="size-3.5" />
+              Inventory studio
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">Inventory</h2>
             <p className="text-sm text-muted-foreground">
-              Manage stock quantities, pricing defaults, and account mappings used by bills, invoices,
-              and inventory valuation.
+              Browse products faster with filters, layout switching, product profiles, and export-ready stock views.
             </p>
           </div>
         </div>
         <Button asChild variant="outline">
-          <Link href={`/${orgId}/inventory/export`}>Download inventory workbook</Link>
+          <Link href={`/${orgId}/inventory/export`}>
+            <Download className="size-4" />
+            Download inventory workbook
+          </Link>
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Inventory summary</CardTitle>
+      <Card className="overflow-hidden border-border/70 bg-card/90">
+        <CardHeader className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.14),transparent_24%)]" />
+          <CardTitle className="relative text-base">Inventory summary</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Units on hand</p>
-              <p className="mt-2 text-2xl font-semibold">{totalUnits.toLocaleString()}</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Inventory value</p>
-              <p className="mt-2 text-2xl font-semibold">
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: baseCurrency || "GHS",
-                  maximumFractionDigits: 2,
-                }).format(totalStockValue)}
-              </p>
-            </div>
+        <CardContent className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Units on hand</p>
+            <p className="mt-2 text-2xl font-semibold">{totalUnits.toLocaleString()}</p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Inventory value</p>
+            <p className="mt-2 text-2xl font-semibold">
+              {new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: baseCurrency || "GHS",
+                maximumFractionDigits: 2,
+              }).format(totalStockValue)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Active products</p>
+            <p className="mt-2 text-2xl font-semibold">{activeItems}</p>
           </div>
         </CardContent>
       </Card>
 
       {canManageInventory ? (
-        <Card>
+        <Card className="border-border/70 bg-card/85">
           <CardHeader>
             <CardTitle className="text-base">Add inventory item</CardTitle>
           </CardHeader>
@@ -90,7 +100,7 @@ export default async function InventoryPage({
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="border-border/70 bg-card/85">
           <CardHeader>
             <CardTitle className="text-base">Inventory changes are restricted</CardTitle>
           </CardHeader>
@@ -102,7 +112,7 @@ export default async function InventoryPage({
         </Card>
       )}
 
-      <Card>
+      <Card className="border-border/70 bg-card/85">
         <CardHeader>
           <CardTitle className="text-base">Inventory register</CardTitle>
         </CardHeader>
