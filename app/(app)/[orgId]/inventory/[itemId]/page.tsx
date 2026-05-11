@@ -63,19 +63,19 @@ export default async function InventoryItemPage({
           </Link>
         </Button>
         <Card className="overflow-hidden border-border/70 bg-card/90">
-          <CardContent className="relative grid gap-6 px-6 py-6 lg:grid-cols-[280px,1fr]">
+          <CardContent className="relative grid gap-6 px-6 py-6 lg:grid-cols-[320px,1fr]">
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-emerald-500/15 via-sky-500/10 to-amber-500/15" />
-            <div className="relative">
+            <div className="relative flex justify-center lg:justify-start">
               {imageUrl ? (
                 <Image
                   src={imageUrl}
                   alt={String(item.name ?? "Inventory item")}
                   width={720}
                   height={720}
-                  className="h-64 w-full rounded-2xl border border-border/60 bg-muted object-cover shadow-sm"
+                  className="aspect-square w-full max-w-[280px] rounded-[2rem] border border-border/60 bg-muted object-cover shadow-sm"
                 />
               ) : (
-                <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/40 text-muted-foreground">
+                <div className="flex aspect-square w-full max-w-[280px] items-center justify-center rounded-[2rem] border border-dashed border-border/70 bg-muted/40 text-muted-foreground">
                   <PackageSearch className="size-10" />
                 </div>
               )}

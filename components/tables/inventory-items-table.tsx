@@ -464,8 +464,11 @@ export function InventoryItemsTable({
               <div
                 key={item.id}
                 className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/85 shadow-sm transition-colors hover:border-primary/30"
+                onClick={(event) => {
+                  if (isInteractiveTarget(event.target)) return;
+                  router.push(`/${orgId}/inventory/${item.id}`);
+                }}
               >
-                <Link href={`/${orgId}/inventory/${item.id}`} className="absolute inset-0 z-0" aria-label={`Open ${item.name}`} />
                 <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-amber-500/10" />
                 <div className="relative z-10 p-4">
                   <div className="flex items-start justify-between gap-3">
