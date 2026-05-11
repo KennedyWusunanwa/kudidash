@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { z } from "zod";
 
 export const accountTypeEnum = z.enum([
@@ -28,7 +29,7 @@ export const accountSchema = z.object({
   name: z.string().trim().min(2).max(120),
   type: accountTypeEnum,
   sub_type: accountSubTypeEnum,
-  currency_code: z.string().trim().length(3).default("GHS"),
+  currency_code: z.string().trim().length(3).default(DEFAULT_CURRENCY_CODE),
   is_active: z.boolean().default(true),
 });
 

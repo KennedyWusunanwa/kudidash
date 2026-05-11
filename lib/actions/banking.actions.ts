@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { isDemoMode } from "@/lib/env";
 import {
   ActionResult,
@@ -14,7 +15,7 @@ const bankAccountSchema = z.object({
   orgId: z.string().uuid(),
   name: z.string().trim().min(2).max(120),
   account_number_masked: z.string().trim().max(32).optional().or(z.literal("")),
-  currency_code: z.string().length(3).default("GHS"),
+  currency_code: z.string().length(3).default(DEFAULT_CURRENCY_CODE),
   gl_account_id: z.string().uuid(),
 });
 

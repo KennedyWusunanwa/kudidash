@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 
 type ReceiptLike = {
   id: string;
@@ -60,11 +61,11 @@ export async function buildReceiptPdf({
   const muted = rgb(0.42, 0.45, 0.49);
   const rule = rgb(0.82, 0.83, 0.86);
 
-  const currency = receipt.currency_code || org.base_currency || "GHS";
+  const currency = receipt.currency_code || org.base_currency || DEFAULT_CURRENCY_CODE;
   const formatCurrency = (value: number | null | undefined, code = currency) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: code || "GHS",
+      currency: code || DEFAULT_CURRENCY_CODE,
       maximumFractionDigits: 2,
     }).format(value ?? 0);
   const formatDate = (value: string | null | undefined) => {

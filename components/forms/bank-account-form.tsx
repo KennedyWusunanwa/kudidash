@@ -28,7 +28,7 @@ import {
 const schema = z.object({
   name: z.string().trim().min(2).max(120),
   account_number_masked: z.string().trim().max(32).optional().or(z.literal("")),
-  currency_code: z.string().length(3).default("GHS"),
+  currency_code: z.string().length(3).default(DEFAULT_CURRENCY_CODE),
   gl_account_id: z.string().uuid(),
 });
 
@@ -75,7 +75,7 @@ export function BankAccountForm({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder="Main GHS Bank" {...(field as any)} />
+                <Input placeholder="Main USD Bank" {...(field as any)} />
               </FormControl>
               <FormMessage />
             </FormItem>

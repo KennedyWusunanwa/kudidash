@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { isDemoMode } from "@/lib/env";
 import {
   ActionResult,
@@ -37,7 +38,8 @@ export async function verifyInvoiceReceiptAction(
 
     const supabase = await getServerSupabaseForOrg(parsed.orgId, "sales.manage");
     const normalizedCurrency =
-      (parsed.currency_code || "GHS").trim().toUpperCase() || "GHS";
+      (parsed.currency_code || DEFAULT_CURRENCY_CODE).trim().toUpperCase() ||
+      DEFAULT_CURRENCY_CODE;
 
     const { data, error } = await supabase.rpc("kd_verify_invoice_receipt", {
       p_org_id: parsed.orgId,

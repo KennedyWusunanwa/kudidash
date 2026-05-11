@@ -73,7 +73,7 @@ export async function GET(
         invoice_date: (invoice.invoice_date as string | null | undefined) ?? null,
         due_date: (invoice.due_date as string | null | undefined) ?? null,
         status: (invoice.status as string | null | undefined) ?? "draft",
-        currency_code: (invoice.currency_code as string | null | undefined) ?? "GHS",
+        currency_code: (invoice.currency_code as string | null | undefined) ?? "USD",
         tax_rate: Number(invoice.tax_rate ?? 0),
         subtotal: Number(invoice.subtotal ?? 0),
         tax_total: Number(invoice.tax_total ?? 0),

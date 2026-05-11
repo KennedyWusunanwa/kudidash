@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { demoIds } from "@/lib/demo/data";
 import { isDemoMode } from "@/lib/env";
 import {
@@ -18,7 +19,7 @@ import { getCurrentUser } from "@/lib/data/org.data";
 const createOrgSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/),
-  base_currency: z.string().length(3).default("GHS"),
+  base_currency: z.string().length(3).default(DEFAULT_CURRENCY_CODE),
 });
 
 const switchOrgSchema = z.object({

@@ -40,7 +40,7 @@ export default async function SettingsPage({
             orgId={orgId}
             org={{
               name: String(org?.name ?? ""),
-              base_currency: String(org?.base_currency ?? "GHS"),
+              base_currency: String(org?.base_currency ?? "USD"),
               fiscal_year_start_month: Number(org?.fiscal_year_start_month ?? 1),
               dashboard_name:
                 typeof org?.dashboard_name === "string" ? String(org.dashboard_name) : "",

@@ -34,7 +34,7 @@ const orgFormSchema = z.object({
     .min(2)
     .max(80)
     .regex(/^[a-z0-9-]+$/),
-  base_currency: z.string().length(3).default("GHS"),
+  base_currency: z.string().length(3).default(DEFAULT_CURRENCY_CODE),
 });
 
 type OrgFormInput = z.input<typeof orgFormSchema>;

@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { z } from "zod";
 
 const money = z
@@ -21,7 +22,7 @@ export const billSchema = z.object({
   vendor_id: z.string().uuid(),
   bill_date: z.string().date(),
   due_date: z.string().date(),
-  currency_code: z.string().length(3).default("GHS"),
+  currency_code: z.string().length(3).default(DEFAULT_CURRENCY_CODE),
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
   lines: z.array(billLineSchema).min(1),
 });

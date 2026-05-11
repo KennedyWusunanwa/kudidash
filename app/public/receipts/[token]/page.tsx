@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { getPublicReceiptDocumentByToken } from "@/lib/data/receipts.data";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export default async function PublicReceiptPage({
       ? receipt.currency_code.trim().toUpperCase()
       : typeof org.base_currency === "string" && org.base_currency.trim()
         ? org.base_currency.trim().toUpperCase()
-        : "GHS";
+        : DEFAULT_CURRENCY_CODE;
 
   return (
     <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-6 px-4 py-10">

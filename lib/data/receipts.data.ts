@@ -86,7 +86,7 @@ export async function listInvoiceReceipts(orgId: string, invoiceId: string) {
             receipt_no: typeof receipt.receipt_no === "string" ? receipt.receipt_no : null,
             receipt_date: String(receipt.receipt_date ?? ""),
             amount: Number(receipt.amount ?? 0),
-            currency_code: String(receipt.currency_code ?? "GHS"),
+            currency_code: String(receipt.currency_code ?? "USD"),
             reference: typeof receipt.reference === "string" ? receipt.reference : null,
             payment_method:
               typeof receipt.payment_method === "string" ? receipt.payment_method : null,
@@ -146,7 +146,7 @@ export async function getReceiptById(orgId: string, receiptId: string) {
               invoice_date: String(invoice.invoice_date ?? ""),
               due_date: String(invoice.due_date ?? ""),
               total: Number(invoice.total ?? 0),
-              currency_code: String(invoice.currency_code ?? "GHS"),
+              currency_code: String(invoice.currency_code ?? "USD"),
               public_view_token:
                 typeof invoice.public_view_token === "string" ? invoice.public_view_token : null,
             }
@@ -233,7 +233,7 @@ export async function getPublicReceiptDocumentByToken(token: string) {
               invoice_date: String(invoice.invoice_date ?? ""),
               due_date: String(invoice.due_date ?? ""),
               total: Number(invoice.total ?? 0),
-              currency_code: String(invoice.currency_code ?? "GHS"),
+              currency_code: String(invoice.currency_code ?? "USD"),
             }
           : null,
       };

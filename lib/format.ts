@@ -1,8 +1,11 @@
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
+
 export function formatCurrency(
   value: number | null | undefined,
-  currency = process.env.NEXT_PUBLIC_DEFAULT_CURRENCY || "GHS"
+  currency = DEFAULT_CURRENCY_CODE
 ) {
-  const normalized = String(currency || "GHS").trim().toUpperCase() || "GHS";
+  const normalized =
+    String(currency || DEFAULT_CURRENCY_CODE).trim().toUpperCase() || DEFAULT_CURRENCY_CODE;
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -12,7 +15,7 @@ export function formatCurrency(
   } catch {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "GHS",
+      currency: DEFAULT_CURRENCY_CODE,
       maximumFractionDigits: 2,
     }).format(value ?? 0);
   }

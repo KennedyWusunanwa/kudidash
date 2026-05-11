@@ -364,7 +364,7 @@ export default async function CustomerProfilePage({
                   <div className="flex shrink-0 items-center gap-2">
                     {activity.amount != null ? (
                       <span className="text-sm font-medium">
-                        {formatCurrency(activity.amount, activity.currency_code || baseCurrency || "GHS")}
+                        {formatCurrency(activity.amount, activity.currency_code || baseCurrency || "USD")}
                       </span>
                     ) : null}
                     {activity.href ? (

@@ -59,7 +59,7 @@ export default async function CustomersPage({
         </CardHeader>
         <CardContent>
           <p className="mb-3 text-xs text-muted-foreground">
-            Monetary summary columns are shown in base currency: {baseCurrency ?? "GHS"}.
+            Monetary summary columns are shown in base currency: {baseCurrency ?? "USD"}.
           </p>
           <div className="rounded-lg border">
             <Table>

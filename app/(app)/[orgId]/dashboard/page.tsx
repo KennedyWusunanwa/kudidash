@@ -87,7 +87,7 @@ export default async function DashboardPage({
                 <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                   Base currency
                 </div>
-                <div className="mt-2 text-xl font-semibold">{dashboardCurrency ?? "GHS"}</div>
+                <div className="mt-2 text-xl font-semibold">{dashboardCurrency ?? "USD"}</div>
               </div>
               <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
                 <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">

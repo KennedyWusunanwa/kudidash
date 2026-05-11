@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { getPublicInvoiceDocumentByToken } from "@/lib/data/receipts.data";
 import { buildInvoicePdf } from "@/lib/pdf/invoice-pdf";
 
@@ -71,7 +72,8 @@ export async function GET(
       invoice_date: typeof invoice.invoice_date === "string" ? invoice.invoice_date : null,
       due_date: typeof invoice.due_date === "string" ? invoice.due_date : null,
       status: typeof invoice.status === "string" ? invoice.status : "draft",
-      currency_code: typeof invoice.currency_code === "string" ? invoice.currency_code : "GHS",
+      currency_code:
+        typeof invoice.currency_code === "string" ? invoice.currency_code : DEFAULT_CURRENCY_CODE,
       tax_rate: Number(invoice.tax_rate ?? 0),
       subtotal: Number(invoice.subtotal ?? 0),
       tax_total: Number(invoice.tax_total ?? 0),

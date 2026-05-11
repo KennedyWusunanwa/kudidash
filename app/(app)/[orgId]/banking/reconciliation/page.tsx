@@ -63,7 +63,7 @@ export default async function BankingReconciliationPage({
                   <div key={String(account.id)} className="rounded-lg border p-3">
                     <div className="font-medium">{String(account.name)}</div>
                     <div className="text-xs text-muted-foreground">
-                      {String(account.currency_code ?? "GHS")} · {String(account.account_number_masked ?? "-")}
+                      {String(account.currency_code ?? "USD")} · {String(account.account_number_masked ?? "-")}
                     </div>
                   </div>
                 ))

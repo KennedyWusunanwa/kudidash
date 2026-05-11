@@ -46,7 +46,7 @@ export default async function InvoiceDetailPage({
   const invoiceCurrency =
     typeof invoice.currency_code === "string" && invoice.currency_code.trim()
       ? invoice.currency_code.trim().toUpperCase()
-      : "GHS";
+      : "USD";
   const amountPaid = Number(invoice.amount_paid ?? 0);
   const total = Number(invoice.total ?? 0);
   const outstanding = Number((total - amountPaid).toFixed(2));

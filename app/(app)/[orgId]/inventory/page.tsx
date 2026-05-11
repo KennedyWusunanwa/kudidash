@@ -78,7 +78,7 @@ export default async function InventoryPage({
             <p className="mt-2 text-2xl font-semibold">
               {new Intl.NumberFormat("en-US", {
                 style: "currency",
-                currency: baseCurrency || "GHS",
+                currency: baseCurrency || "USD",
                 maximumFractionDigits: 2,
               }).format(totalStockValue)}
             </p>

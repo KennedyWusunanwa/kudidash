@@ -7,6 +7,7 @@ import {
   type PDFPage,
 } from "pdf-lib";
 import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 
 type InvoiceLineLike = {
   id?: string;
@@ -66,7 +67,7 @@ export interface InvoicePdfPayload {
 const PAGE = { width: 595.28, height: 841.89 }; // A4 portrait (pt)
 const MARGIN = 44;
 
-function currencyFmt(value: number | null | undefined, currency = "GHS") {
+function currencyFmt(value: number | null | undefined, currency = DEFAULT_CURRENCY_CODE) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -272,7 +273,8 @@ export async function buildInvoicePdf(payload: InvoicePdfPayload) {
   const contentX = MARGIN;
   const contentWidth = PAGE.width - MARGIN * 2;
   const rightEdge = PAGE.width - MARGIN;
-  const currency = payload.invoice.currency_code || payload.org.base_currency || "GHS";
+  const currency =
+    payload.invoice.currency_code || payload.org.base_currency || DEFAULT_CURRENCY_CODE;
   const invoiceDisplayNo = getInvoiceDisplayNumber(payload.invoice.invoice_no, payload.invoice.id);
   const statusLabel = (payload.invoice.status || "draft").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   const taxRateLabel = taxRateFmt(payload.invoice.tax_rate);

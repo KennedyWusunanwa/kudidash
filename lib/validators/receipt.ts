@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { z } from "zod";
 
 const money = z
@@ -11,7 +12,7 @@ export const verifyReceiptSchema = z.object({
   customer_id: z.string().uuid(),
   receipt_date: z.string().date(),
   amount: money,
-  currency_code: z.string().length(3).default("GHS"),
+  currency_code: z.string().length(3).default(DEFAULT_CURRENCY_CODE),
   payment_method: z.string().trim().max(60).optional().or(z.literal("")),
   reference: z.string().trim().max(120).optional().or(z.literal("")),
   notes: z.string().trim().max(500).optional().or(z.literal("")),

@@ -31,7 +31,7 @@ export default async function SelectOrgPage() {
                   <div>
                     <div className="font-medium">{org.organization?.name ?? org.org_id}</div>
                     <div className="text-sm text-muted-foreground">
-                      Role: {org.role} · Currency: {org.organization?.base_currency ?? "GHS"}
+                      Role: {org.role} · Currency: {org.organization?.base_currency ?? "USD"}
                     </div>
                   </div>
                   <Button asChild>

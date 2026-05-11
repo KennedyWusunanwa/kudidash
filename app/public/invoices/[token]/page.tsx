@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getInvoiceDisplayNumber } from "@/lib/accounting/invoice-number";
 import { getInvoiceDisplayStatus } from "@/lib/accounting/invoice-status";
 import { formatTaxRate } from "@/lib/accounting/tax";
+import { DEFAULT_CURRENCY_CODE } from "@/lib/currencies";
 import { getPublicInvoiceDocumentByToken } from "@/lib/data/receipts.data";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ export default async function PublicInvoicePage({
       ? invoice.currency_code.trim().toUpperCase()
       : typeof org.base_currency === "string" && org.base_currency.trim()
         ? org.base_currency.trim().toUpperCase()
-        : "GHS";
+        : DEFAULT_CURRENCY_CODE;
   const amountPaid = Number(invoice.amount_paid ?? 0);
   const outstanding = Number((Number(invoice.total ?? 0) - amountPaid).toFixed(2));
   const displayStatus = getInvoiceDisplayStatus(
