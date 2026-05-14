@@ -20,22 +20,23 @@ export function KpiCard({
   accentClassName = "from-emerald-500/15 via-sky-500/10 to-amber-500/15",
 }: KpiCardProps) {
   return (
-    <Card className="relative overflow-hidden border-border/70 bg-card/85 backdrop-blur">
-      <div className={`absolute inset-x-0 top-0 h-20 bg-gradient-to-r ${accentClassName}`} />
+    <Card className="relative overflow-hidden bg-card/92 backdrop-blur">
+      <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-r ${accentClassName}`} />
+      <div className="absolute inset-x-0 top-0 h-1 bg-primary/75" />
       <CardHeader className="relative pb-2">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
             {title}
           </CardTitle>
           {Icon ? (
-            <div className="flex size-9 items-center justify-center rounded-full border border-border/60 bg-background/80">
+            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/60 bg-background/90 shadow-sm">
               <Icon className="size-4 text-foreground/80" />
             </div>
           ) : null}
         </div>
       </CardHeader>
       <CardContent className="relative">
-        <div className="text-2xl font-semibold tracking-tight">
+        <div className="text-2xl font-semibold tracking-[-0.03em]">
           {formatCurrency(value, currency || undefined)}
         </div>
         {description ? (

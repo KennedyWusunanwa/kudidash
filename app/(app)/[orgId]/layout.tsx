@@ -38,7 +38,7 @@ export default async function OrgLayout({
   const brandCssVars = getDashboardBrandCssVars(org?.dashboard_color_scheme);
 
   return (
-    <div className="min-h-screen bg-background" style={brandCssVars}>
+    <div className="dashboard-shell min-h-screen bg-background" style={brandCssVars}>
       <div className="flex min-h-screen">
         <Sidebar
           orgId={orgId}
@@ -51,13 +51,27 @@ export default async function OrgLayout({
             userEmail={user?.email}
             branding={{ dashboardName, logoUrl: dashboardLogoUrl }}
           />
-          <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6">
+          <main className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
             <RouteTransition>
-              <div className="mb-4">
-                <h1 className="text-lg font-semibold tracking-tight">{org?.name ?? "Organization"}</h1>
-                <p className="text-sm text-muted-foreground">
-                  Multi-tenant accounting workspace - Org ID: {orgId}
-                </p>
+              <div className="shell-panel shell-grid mb-6 rounded-[1.6rem] px-5 py-5 sm:px-6">
+                <div className="relative flex flex-wrap items-end justify-between gap-5">
+                  <div>
+                    <p className="surface-label">Accounting workspace</p>
+                    <h1 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+                      {org?.name ?? "Organization"}
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                      Run day-to-day finance operations from a cleaner dashboard shell while keeping your
+                      existing organization records and workflows intact.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/82 px-4 py-3 text-right shadow-sm">
+                    <div className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      Org ID
+                    </div>
+                    <div className="mt-1 font-mono text-sm font-semibold text-foreground">{orgId}</div>
+                  </div>
+                </div>
               </div>
               {children}
             </RouteTransition>

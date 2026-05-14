@@ -9,7 +9,7 @@ interface ChartCardProps {
 
 export function ChartCard({ title, subtitle, children }: ChartCardProps) {
   return (
-    <Card className="border-border/70 bg-card/80">
+    <Card className="bg-card/92">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">{title}</CardTitle>
         {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}

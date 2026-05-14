@@ -3,9 +3,12 @@ import {
   ArrowRight,
   BarChart3,
   Boxes,
+  BriefcaseBusiness,
   CircleDollarSign,
   CreditCard,
   HandCoins,
+  Layers3,
+  Receipt,
   ReceiptText,
   TrendingDown,
   TrendingUp,
@@ -65,35 +68,49 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-border/70 bg-card/90">
-        <CardContent className="relative overflow-hidden px-6 py-6">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.14),transparent_24%)]" />
+      <Card className="shell-grid overflow-hidden bg-card/95">
+        <CardContent className="relative overflow-hidden px-6 py-6 lg:px-7 lg:py-7">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_30%),radial-gradient(circle_at_top_right,rgba(45,212,191,0.13),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.12),transparent_26%)]" />
           <div className="relative flex flex-wrap items-center justify-between gap-6">
             <div className="max-w-2xl space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/75 px-3 py-1 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+              <div className="surface-label">
                 <BarChart3 className="size-3.5" />
                 Finance cockpit
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Watch cash, receivables, payables, and inventory in one place with quicker jumps into the modules that need attention.
+                <h1 className="text-3xl font-semibold tracking-[-0.05em]">Dashboard</h1>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+                  Watch cash, receivables, payables, and inventory from a more structured control room, then jump
+                  straight into the modules that need attention.
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
-                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[1.35rem] border border-border/70 bg-background/88 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <Wallet className="size-3.5" />
                   Base currency
                 </div>
-                <div className="mt-2 text-xl font-semibold">{dashboardCurrency ?? "USD"}</div>
+                <div className="mt-2 text-xl font-semibold tracking-[-0.03em]">
+                  {dashboardCurrency ?? "USD"}
+                </div>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm">
-                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="rounded-[1.35rem] border border-border/70 bg-background/88 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <Layers3 className="size-3.5" />
                   Live modules
                 </div>
-                <div className="mt-2 text-xl font-semibold">Invoices, bills, journals, inventory</div>
+                <div className="mt-2 text-lg font-semibold tracking-[-0.03em]">
+                  Invoices, bills, journals, inventory
+                </div>
+              </div>
+              <div className="rounded-[1.35rem] border border-border/70 bg-background/88 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <BriefcaseBusiness className="size-3.5" />
+                  Action flow
+                </div>
+                <div className="mt-2 text-lg font-semibold tracking-[-0.03em]">Review, reconcile, export</div>
               </div>
             </div>
           </div>
@@ -167,7 +184,7 @@ export default async function DashboardPage({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <Card className="border-border/70 bg-card/85">
+        <Card className="bg-card/92">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <ReceiptText className="size-4 text-sky-600 dark:text-sky-300" />
@@ -183,7 +200,7 @@ export default async function DashboardPage({
                 <Link
                   key={invoice.id}
                   href={`/${orgId}/invoices/${invoice.id}`}
-                  className="flex items-center justify-between rounded-xl border border-border/60 p-3 transition-colors hover:bg-accent"
+                  className="flex items-center justify-between rounded-[1rem] border border-border/60 bg-background/55 p-3 transition-colors hover:bg-accent"
                 >
                   <div>
                     <p className="text-sm font-medium">
@@ -210,7 +227,7 @@ export default async function DashboardPage({
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-card/85">
+        <Card className="bg-card/92">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <CircleDollarSign className="size-4 text-orange-600 dark:text-orange-300" />
@@ -226,7 +243,7 @@ export default async function DashboardPage({
                 <Link
                   key={bill.id}
                   href={`/${orgId}/bills/${bill.id}`}
-                  className="flex items-center justify-between rounded-xl border border-border/60 p-3 transition-colors hover:bg-accent"
+                  className="flex items-center justify-between rounded-[1rem] border border-border/60 bg-background/55 p-3 transition-colors hover:bg-accent"
                 >
                   <div>
                     <p className="text-sm font-medium">{bill.bill_no ?? bill.id.slice(0, 8)}</p>
@@ -249,7 +266,7 @@ export default async function DashboardPage({
           </CardContent>
         </Card>
 
-        <Card className="border-border/70 bg-card/85">
+        <Card className="bg-card/92">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="size-4 text-emerald-600 dark:text-emerald-300" />
@@ -265,7 +282,7 @@ export default async function DashboardPage({
                 <Link
                   key={journal.id}
                   href={`/${orgId}/journals/${journal.id}`}
-                  className="block rounded-xl border border-border/60 p-3 transition-colors hover:bg-accent"
+                  className="block rounded-[1rem] border border-border/60 bg-background/55 p-3 transition-colors hover:bg-accent"
                 >
                   <p className="text-sm font-medium">{journal.journal_no ?? journal.id.slice(0, 8)}</p>
                   <p className="text-xs text-muted-foreground">
@@ -283,7 +300,7 @@ export default async function DashboardPage({
       <section className="grid gap-4 xl:grid-cols-3">
         <Link
           href={`/${orgId}/inventory`}
-          className="group rounded-2xl border border-border/70 bg-card/80 p-5 transition-colors hover:border-primary/30 hover:bg-card"
+          className="group shell-panel rounded-[1.35rem] p-5 transition-colors hover:border-primary/30"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -297,7 +314,7 @@ export default async function DashboardPage({
         </Link>
         <Link
           href={`/${orgId}/reports`}
-          className="group rounded-2xl border border-border/70 bg-card/80 p-5 transition-colors hover:border-primary/30 hover:bg-card"
+          className="group shell-panel rounded-[1.35rem] p-5 transition-colors hover:border-primary/30"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -311,7 +328,7 @@ export default async function DashboardPage({
         </Link>
         <Link
           href={`/${orgId}/banking/reconciliation`}
-          className="group rounded-2xl border border-border/70 bg-card/80 p-5 transition-colors hover:border-primary/30 hover:bg-card"
+          className="group shell-panel rounded-[1.35rem] p-5 transition-colors hover:border-primary/30"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -321,6 +338,45 @@ export default async function DashboardPage({
               <div className="mt-2 text-lg font-semibold">Reconcile account activity</div>
             </div>
             <Wallet className="size-5 text-emerald-600 transition-transform group-hover:translate-x-1 dark:text-emerald-300" />
+          </div>
+        </Link>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        <Link
+          href={`/${orgId}/invoices/new`}
+          className="group rounded-[1.35rem] border border-dashed border-border/80 bg-background/75 p-5 transition-colors hover:border-primary/35 hover:bg-background"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Create</div>
+              <div className="mt-2 text-lg font-semibold">Issue a new invoice</div>
+            </div>
+            <Receipt className="size-5 text-primary transition-transform group-hover:translate-x-1" />
+          </div>
+        </Link>
+        <Link
+          href={`/${orgId}/bills/new`}
+          className="group rounded-[1.35rem] border border-dashed border-border/80 bg-background/75 p-5 transition-colors hover:border-primary/35 hover:bg-background"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Capture</div>
+              <div className="mt-2 text-lg font-semibold">Record a supplier bill</div>
+            </div>
+            <CircleDollarSign className="size-5 text-primary transition-transform group-hover:translate-x-1" />
+          </div>
+        </Link>
+        <Link
+          href={`/${orgId}/journals/new`}
+          className="group rounded-[1.35rem] border border-dashed border-border/80 bg-background/75 p-5 transition-colors hover:border-primary/35 hover:bg-background"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Post</div>
+              <div className="mt-2 text-lg font-semibold">Add a journal entry</div>
+            </div>
+            <ArrowRight className="size-5 text-primary transition-transform group-hover:translate-x-1" />
           </div>
         </Link>
       </section>
